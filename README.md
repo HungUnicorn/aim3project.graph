@@ -1,4 +1,4 @@
-aim3project.graph
+Analysis of Graph Structure in the Web Using Apache Flink
 =================
 ###The dataset is used
 http://webdatacommons.org/hyperlinkgraph/index.html#toc4
