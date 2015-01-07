@@ -8,3 +8,6 @@ https://github.com/HungUnicorn/aim3project.graph/issues
 
 ###Algorithms in Scala (can be a reference)
 https://github.com/sscdotopen/trackthetrackers/tree/master/analysis/src/main/scala/io/ssc/trackthetrackers/analysis/algorithms
+
+###Code that WebCommon uses
+https://www.assembla.com/code/commondata/subversion/nodes
