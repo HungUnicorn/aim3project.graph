@@ -24,10 +24,10 @@ public class OutDegreeDistribution {
 
     ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-    DataSource<String> input = env.readTextFile(Config.pathToWebCommon());
+    DataSource<String> input = env.readTextFile(Config.pathToSmallArcs());
 
-    /* Convert the input to edges, consisting of (source, target, isFriend ) */
-    DataSet<Tuple3<Long, Long, Boolean>> edges = input.flatMap(new EdgeReader());
+    /* Convert the input to edges, consisting of (source, target) */
+    DataSet<Tuple2<Long, Long>> edges = input.flatMap(new EdgeReader());
 
     /* Create a dataset of all vertex ids and count them */
     DataSet<Long> numVertices =
@@ -45,25 +45,24 @@ public class OutDegreeDistribution {
         verticesWithDegree.groupBy(1).reduceGroup(new DistributionElement())
                                      .withBroadcastSet(numVertices, "numVertices");
 
-    degreeDistribution.writeAsText(Config.outputPath(), FileSystem.WriteMode.OVERWRITE);
+    degreeDistribution.writeAsText(Config.pathToOutDegreeDistritbuion(), FileSystem.WriteMode.OVERWRITE);
 
     env.execute();
   }
 
-  public static class EdgeReader implements FlatMapFunction<String, Tuple3<Long, Long, Boolean>> {
+  public static class EdgeReader implements FlatMapFunction<String, Tuple2<Long, Long>> {
 
     private static final Pattern SEPARATOR = Pattern.compile("[ \t,]");
 
     @Override
-    public void flatMap(String s, Collector<Tuple3<Long, Long, Boolean>> collector) throws Exception {
+    public void flatMap(String s, Collector<Tuple2<Long, Long>> collector) throws Exception {
       if (!s.startsWith("%")) {
         String[] tokens = SEPARATOR.split(s);
 
         long source = Long.parseLong(tokens[0]);
         long target = Long.parseLong(tokens[1]);
-        boolean isFriend = "+1".equals(tokens[2]);
 
-        collector.collect(new Tuple3<Long, Long, Boolean>(source, target, isFriend));
+        collector.collect(new Tuple2<Long, Long>(source, target));
       }
     }
   }

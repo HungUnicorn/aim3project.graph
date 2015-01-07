@@ -7,10 +7,15 @@ public class Config {
   private static final String INPUT_PATH = "/home/hung/aim3project.graph/src/test/resources/";
   private static final String OUTPUT_PATH = "/home/hung/aim3project.graph/src/test/resources/analysis/";
   
-  public static String pathToSmallGraph() {
-		return INPUT_PATH + "small.tab";
+  // Example files contain a graph with 106 nodes and 141 arcs
+  public static String pathToSmallArcs() {
+		return INPUT_PATH + "smallGraph/example_arcs";
 	}
-
+  // Example nodes
+  public static String pathToSmallIndex() {
+		return INPUT_PATH + "example_index";
+	}
+  
 	public static String pathToBigGraph() {
 		return INPUT_PATH + "big.tab";
 	}
@@ -20,11 +25,11 @@ public class Config {
   }
 
   public static String outputPath() {
-    return "/tmp/statistics/";
+    return OUTPUT_PATH+ "/tmp/statistics/";
   }
 
-  public static String pathToDegreeDistritbuion() {
-		return OUTPUT_PATH + "degreeDistribution";
+  public static String pathToOutDegreeDistritbuion() {
+		return OUTPUT_PATH + "outDegreeDistribution";
 	}
   
   public static long randomSeed() {
