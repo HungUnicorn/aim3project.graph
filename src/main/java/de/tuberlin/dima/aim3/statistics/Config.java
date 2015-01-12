@@ -13,7 +13,7 @@ public class Config {
 	}
   // Example nodes
   public static String pathToSmallIndex() {
-		return INPUT_PATH + "example_index";
+		return INPUT_PATH + "smallGraph/example_index";
 	}
   
 	public static String pathToBigGraph() {
@@ -30,9 +30,13 @@ public class Config {
 
   public static String pathToOutDegreeDistritbuion() {
 		return OUTPUT_PATH + "outDegreeDistribution";
-	}
+	}    
   
-  public static long randomSeed() {
-    return 0xdeadbeef;
+  public static long topK() {
+	    return 5;
+	  } 
+  
+  public static long avgOutDegree(){
+	  return (long) 1;
   }
 }

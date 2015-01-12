@@ -1,7 +1,8 @@
 package de.tuberlin.dima.aim3.statistics;
 
-import com.google.common.collect.Iterables;
-import de.tuberlin.dima.aim3.statistics.Config;
+import java.util.Iterator;
+import java.util.regex.Pattern;
+
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
@@ -10,13 +11,11 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.util.Collector;
 
-import java.util.Iterator;
-import java.util.regex.Pattern;
+import com.google.common.collect.Iterables;
 
 public class OutDegreeDistribution {
 
