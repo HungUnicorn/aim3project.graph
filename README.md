@@ -15,3 +15,6 @@ https://github.com/apache/flink/tree/master/flink-examples/flink-java-examples/s
 ###Code that WebCommon uses
 https://www.assembla.com/code/commondata/subversion/nodes
 
+###Centrality Sample Code & PDF
+https://github.com/stratosphere/stratosphere/pull/904/files
+http://it4bi.univ-tours.fr/medias/images/Large-scale-centrality-measures-in-apache-flink-apache-giraph.pdf
