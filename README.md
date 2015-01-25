@@ -16,5 +16,5 @@ https://github.com/apache/flink/tree/master/flink-examples/flink-java-examples/s
 https://www.assembla.com/code/commondata/subversion/nodes
 
 ###Centrality Sample Code & PDF
-https://github.com/stratosphere/stratosphere/pull/904/files
+https://github.com/JananiC/NetworkCentralities/tree/master/src/main/java/eu/stratosphere/centrality
 http://it4bi.univ-tours.fr/medias/images/Large-scale-centrality-measures-in-apache-flink-apache-giraph.pdf
