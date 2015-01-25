@@ -1,4 +1,4 @@
-package degree;
+package closenessCentrality;
 
 public class Config {
 
@@ -31,18 +31,7 @@ public class Config {
 	}
 
 	public static String outputPath() {
-		return OUTPUT_PATH + "/tmp/statistics/";
+		return OUTPUT_PATH + "/tmp/closenessCentrality/";
 	}
-
-	public static String pathToOutDegreeDistritbuion() {
-		return OUTPUT_PATH + "outDegreeDistribution";
-	}
-
-	public static long topK() {
-		return 5;
-	}
-
-	public static long avgOutDegree() {
-		return (long) 20;
-	}
+	
 }

@@ -37,11 +37,17 @@ public class TopKOutDegree {
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+		/*
+		 * DataSource<String> inputArc = env
+		 * .readTextFile(Config.pathToSmallArcs());
+		 * 
+		 * DataSource<String> inputIndex = env.readTextFile(Config
+		 * .pathToSmallIndex());
+		 */
+		DataSource<String> inputArc = env.readTextFile(Config.pathToBigArcs());
 
 		DataSource<String> inputIndex = env.readTextFile(Config
-				.pathToSmallIndex());
+				.pathToBigIndex());
 
 		DataSet<Tuple2<String, Long>> nodes = inputIndex
 				.flatMap(new NodeReader());
@@ -56,7 +62,7 @@ public class TopKOutDegree {
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
 				.filter(new DegreeFilter());
 
-		DataSet<Tuple3<Long, Long, Long>> topKMapper = verticesWithDegree
+		DataSet<Tuple3<Long, Long, Long>> topKMapper = highOutDegree
 				.flatMap(new TopKMapper());
 
 		DataSet<Tuple3<Long, Long, Long>> topKReducer = topKMapper.groupBy(0)

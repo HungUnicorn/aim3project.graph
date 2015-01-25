@@ -117,6 +117,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 		DataSet<Tuple2<Long, Long>> result = iteration.closeWith(changes,
 				changes);
 
+		//result.groupBy(1).aggregate(Aggregations., field)
 		// emit result
 		if (fileOutput) {
 			result.writeAsCsv(outputPath, "\n", " ");
