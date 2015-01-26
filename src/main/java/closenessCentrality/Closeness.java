@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.accumulators.IntCounter;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
@@ -28,14 +29,16 @@ import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
 
+import degree.TopKOutDegree.ProjectNodeWithName;
+
 /**
  * Efficient closeness computation from Centralities in Large Networks:
  * Algorithms and Observations. Closeness is based on the length of the average
  * shortest path between a node and all other nodes in the network
  * 
  * 1. Sum distance for each node iteratively and output <vertexId, bit[], sum>
- * bit[] records the neighbors of node
- * 2. Avg((n-1)/sum) for each node and output <nodeID, closeness>
+ * bit[] records the neighbors of node 2. Avg((n-1)/sum) for each node and
+ * output <nodeID, closeness>
  */
 
 @SuppressWarnings("serial")
@@ -73,14 +76,16 @@ public class Closeness {
 
 		DeltaIteration<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> deltaIteration = initialSolutionSet
 				.iterateDelta(initialworkingSet, maxIterations, keyPosition);
-		
+		// Step Function: SendMsg and BitwiseOR
+		// Update Function: FilterCovergeNodes
+
 		// Send message to neighbors and record in bit_string
 		DataSet<Tuple3<Long, FMCounter, Double>> neighbors = deltaIteration
 				.getWorkset().join(arcs).where(0).equalTo(1)
 				.with(new SendingMessageToNeighbors())
 				.name("Sending Message To Neighbors");
 
-		// Collect sent neighbors by bitwiseOr bit_string 
+		// Collect sent neighbors by bitwiseOr bit_string
 		GroupReduceOperator<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> bitwiseOR = neighbors
 				.groupBy(0).reduceGroup(new PartialBitwiseOR())
 				.name("BitwiseOR");
@@ -106,8 +111,13 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-
 		closeness.print();
+		
+		/*DataSet<Tuple3<String, Long, Double>> nodewithName = closeness
+				.join(nodes).where(0).equalTo(1)
+				.flatMap(new ProjectNodeWithName());
+
+		nodewithName.print();*/
 
 		/*
 		 * * closeness.writeAsCsv(Config.outputPath(), CentralityUtil.NEWLINE,
@@ -273,40 +283,35 @@ public class Closeness {
 			}
 		}
 
-		public void join(Tuple3<Long, FMCounter, Double> current,
-				Tuple3<Long, FMCounter, Double> previous,
-				Collector<Tuple3<Long, FMCounter, Double>> out) {
+		@Override
+		public Tuple3<Long, FMCounter, Double> join(
+				Tuple3<Long, FMCounter, Double> current,
+				Tuple3<Long, FMCounter, Double> previous) {
 
 			iterationNumber = getIterationRuntimeContext().getSuperstepNumber();
 
 			FMCounter prevFm = previous.f1;
 			FMCounter currFm = current.f1;
 
-			NumNode_before = prevFm.getCount();
-			currFm.merge(prevFm);
-			NumNode_after = currFm.getCount();
-			
+			NumNode_before = ((closenessCentrality.FMCounter) prevFm)
+					.getCount();
+			(currFm).merge(prevFm);
+			NumNode_after = ((closenessCentrality.FMCounter) currFm).getCount();
+
 			if (NumNode_before != NumNode_after) {
-				sum = previous.f2;
+				sum = (java.lang.Double) previous.f2;
 				diff = NumNode_after - NumNode_before;
 				sum = sum + iterationNumber * (diff);
-				current.f2 = sum;
-				out.collect(current);
-				worksetSize.add(current.f0);
+				current.f2 = (Double) sum;
+				worksetSize.add((java.lang.Long) current.f0);
 				System.out.println("not converged " + current.f0 + "  at  "
 						+ iterationNumber);
+				return current;
 			} else {
 				System.out.println("converged " + current.f0 + "  at  "
 						+ iterationNumber);
 			}
-		}
-
-		@Override
-		public Tuple3<Long, FMCounter, Double> join(
-				Tuple3<Long, FMCounter, Double> current,
-				Tuple3<Long, FMCounter, Double> previous) throws Exception {
-
-			return null;
+			return previous;
 		}
 	}
 
@@ -354,6 +359,22 @@ public class Closeness {
 		public void reduce(Iterable<Tuple1<Long>> vertices,
 				Collector<Long> collector) throws Exception {
 			collector.collect(new Long(Iterables.size(vertices)));
+		}
+	}
+
+	public static class ProjectNodeWithName
+			implements
+			FlatMapFunction<Tuple2<Tuple2<Long, Double>, Tuple2<String, Long>>, Tuple3<String, Long, Double>> {
+
+		@Override
+		public void flatMap(
+				Tuple2<Tuple2<Long, Double>, Tuple2<String, Long>> value,
+				Collector<Tuple3<String, Long, Double>> collector)
+				throws Exception {
+
+			collector.collect(new Tuple3<String, Long, Double>(value.f1.f0,
+					value.f1.f1, value.f0.f1));
+
 		}
 	}
 
