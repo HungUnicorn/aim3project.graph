@@ -19,6 +19,7 @@ import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsFirs
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSecond;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.DeltaIteration;
+import org.apache.flink.api.java.operators.GroupReduceOperator;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -29,14 +30,12 @@ import com.google.common.collect.Iterables;
 
 /**
  * Efficient closeness computation from Centralities in Large Networks:
- * Algorithms and Observations Closeness is based on the length of the average
+ * Algorithms and Observations. Closeness is based on the length of the average
  * shortest path between a node and all other nodes in the network
  * 
- * 1. Sum distance for each vertex iteratively and output <vertexId, bit[], sum>
- * 2. Avg((n-1)/sum) for each vertex and output <vertexId, closeness> <br>
- * </ul>
- * 
- * 
+ * 1. Sum distance for each node iteratively and output <vertexId, bit[], sum>
+ * bit[] records the neighbors of node
+ * 2. Avg((n-1)/sum) for each node and output <nodeID, closeness>
  */
 
 @SuppressWarnings("serial")
@@ -74,13 +73,20 @@ public class Closeness {
 
 		DeltaIteration<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> deltaIteration = initialSolutionSet
 				.iterateDelta(initialworkingSet, maxIterations, keyPosition);
-		// deltaIteration.name("Effective Closeness Iteration");
-
-		DataSet<Tuple3<Long, FMCounter, Double>> candidateUpdates = deltaIteration
+		
+		// Send message to neighbors and record in bit_string
+		DataSet<Tuple3<Long, FMCounter, Double>> neighbors = deltaIteration
 				.getWorkset().join(arcs).where(0).equalTo(1)
 				.with(new SendingMessageToNeighbors())
-				.name("Sending Message To Neighbors").groupBy(0)
-				.reduceGroup(new PartialBitwiseOR()).name("BitwiseOR")
+				.name("Sending Message To Neighbors");
+
+		// Collect sent neighbors by bitwiseOr bit_string 
+		GroupReduceOperator<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> bitwiseOR = neighbors
+				.groupBy(0).reduceGroup(new PartialBitwiseOR())
+				.name("BitwiseOR");
+
+		// Get next WorkSet
+		DataSet<Tuple3<Long, FMCounter, Double>> candidateUpdates = bitwiseOR
 				.join(deltaIteration.getSolutionSet()).where(0).equalTo(0)
 				.with(new FilterConvergedNodes())
 				.name("Filters Converged Vertices");
@@ -89,7 +95,7 @@ public class Closeness {
 		DataSet<Tuple3<Long, FMCounter, Double>> finalSolnSet = deltaIteration
 				.closeWith(candidateUpdates, candidateUpdates);
 
-		/* Create a dataset of all vertex ids and count them */
+		// Create a dataset of all node ids and count them
 		DataSet<Long> numVertices = arcs.project(0).types(Long.class)
 				.union(arcs.project(1).types(Long.class)).distinct()
 				.reduceGroup(new CountVertices());
@@ -102,18 +108,13 @@ public class Closeness {
 				.name("Average Computation");
 
 		closeness.print();
+
 		/*
-		 * closeness.writeAsCsv(Config.outputPath(), CentralityUtil.NEWLINE,
+		 * * closeness.writeAsCsv(Config.outputPath(), CentralityUtil.NEWLINE,
 		 * CentralityUtil.TAB_DELIM, WriteMode.OVERWRITE);
 		 */
 
-		JobExecutionResult job = env.execute();
-
-		System.out
-				.println("Total number of iterations-->"
-						+ ((job.getIntCounterResult(SendingMessageToNeighbors.ACCUM_LOCAL_ITERATIONS) / 4 // #subTasks
-						) + 1));
-		System.out.println("RunTime-->" + (job.getNetRuntime()));
+		env.execute();
 	}
 
 	@ConstantFields("0")
@@ -189,7 +190,7 @@ public class Closeness {
 			output.f0 = neighbors.f0;
 			output.f1 = vertex_workset.f1;
 			output.f2 = vertex_workset.f2;
-			// System.out.println("Joining at des id -->"+neighbors.f1+" distributes to only needed vertices which becomes partial bitstring of --->"+neighbors.f0);
+			// System.out.println("Joining at destination id -->"+neighbors.f1+" distributes to only needed vertices which becomes partial bitstring of --->"+neighbors.f0);
 			return output;
 		}
 	}
@@ -284,6 +285,7 @@ public class Closeness {
 			NumNode_before = prevFm.getCount();
 			currFm.merge(prevFm);
 			NumNode_after = currFm.getCount();
+			
 			if (NumNode_before != NumNode_after) {
 				sum = previous.f2;
 				diff = NumNode_after - NumNode_before;
@@ -355,9 +357,11 @@ public class Closeness {
 		}
 	}
 
-	/*@Parameters [Degree of parallelism],[vertices input-path],[edge input-path],
-	 *             [out-put],[Max-Num of iterations],[Number of vertices]*/
-	
+	/*
+	 * @Parameters [Degree of parallelism],[vertices input-path],[edge
+	 * input-path], [out-put],[Max-Num of iterations],[Number of vertices]
+	 */
+
 	private static boolean fileOutput = false;
 	private static String textPath;
 	private static String outputPath;
