@@ -25,6 +25,7 @@ import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
@@ -71,7 +72,7 @@ public class Closeness {
 		/* Convert the input to edges, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
-		int maxIterations = 3;
+		int maxIterations = 10;
 		int keyPosition = 0;
 
 		DeltaIteration<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> deltaIteration = initialSolutionSet
@@ -111,18 +112,14 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-		closeness.print();
+		closeness.writeAsText(Config.outputPath(), WriteMode.OVERWRITE);
 		
 		/*DataSet<Tuple3<String, Long, Double>> nodewithName = closeness
 				.join(nodes).where(0).equalTo(1)
 				.flatMap(new ProjectNodeWithName());
 
 		nodewithName.print();*/
-
-		/*
-		 * * closeness.writeAsCsv(Config.outputPath(), CentralityUtil.NEWLINE,
-		 * CentralityUtil.TAB_DELIM, WriteMode.OVERWRITE);
-		 */
+		
 
 		env.execute();
 	}
