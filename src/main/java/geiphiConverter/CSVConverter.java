@@ -8,7 +8,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Stack;
 
-// Convert Tab to CSV for importing in Geiphi
+// Convert Tab to CSV for importing into Geiphi
+// Used Geiphi's calculation to check the correctness of implemented algorithms
+
 public class CSVConverter{
 
 	static String line; // to read in each line

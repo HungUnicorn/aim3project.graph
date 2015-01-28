@@ -5,8 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.common.accumulators.Accumulator;
 import org.apache.flink.api.common.accumulators.IntCounter;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
@@ -30,7 +28,6 @@ import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
 
-import degree.TopKOutDegree.ProjectNodeWithName;
 
 /**
  * Efficient closeness computation from Centralities in Large Networks:

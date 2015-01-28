@@ -2,61 +2,72 @@ package betweennessCentrality;
 
 import java.util.Iterator;
 
+import org.apache.flink.api.common.JobExecutionResult;
+import org.apache.flink.api.common.accumulators.IntCounter;
+import org.apache.flink.api.common.aggregators.ConvergenceCriterion;
+import org.apache.flink.api.common.aggregators.DoubleSumAggregator;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFields;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsFirst;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSecond;
 import org.apache.flink.api.java.operators.DataSource;
-// Compute which edges is more important, similar to PageRank
+import org.apache.flink.api.java.operators.IterativeDataSet;
+import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.core.fs.FileSystem.WriteMode;
+import org.apache.flink.types.DoubleValue;
 import org.apache.flink.util.Collector;
 
+import com.google.common.collect.Iterables;
+
+import betweennessCentrality.Config;
 import betweennessCentrality.SourceIncidence.ArcReader;
+
+// Generates the importance of arcs and determine which nodes are more important
+// based on the importance of arcs those node have.
+// Computing the importance of arcs are similar to PageRank
 
 public class LineRank {
 	@SuppressWarnings("serial")
 	public static void main(String[] args) throws Exception {
-		/*if (args.length < 4) {
-			System.err
-					.println("Usage: LineRank <DOP> <edgeInputPath> <outputPath> <numIterations> <numOfEdges> <delimiter>");
-			return;
-		}
-
-		final int dop = Integer.parseInt(args[0]);
-
-		final String srcIncidencePath = args[1];
-		final String targetInputPath = args[2];
-		final String outputPath = args[3];
-		final int maxIterations = Integer.parseInt(args[4]);
-		final double numEdges = (args.length > 5 ? (Integer.parseInt(args[5]))
-				: 1);
-		Double c = 0.85;
-		String fieldDelimiter = CentralityUtil.TAB_DELIM;
-		if (args.length > 6) {
-			fieldDelimiter = (args[6]);
-		}
-		char delim = CentralityUtil.checkDelim(fieldDelimiter);
-*/
+		/*
+		 * if (args.length < 4) { System.err .println(
+		 * "Usage: LineRank <DOP> <edgeInputPath> <outputPath> <numIterations> <numOfEdges> <delimiter>"
+		 * ); return; }
+		 * 
+		 * final int dop = Integer.parseInt(args[0]);
+		 * 
+		 * final String srcIncidencePath = args[1]; final String targetInputPath
+		 * = args[2]; final String outputPath = args[3]; final int maxIterations
+		 * = Integer.parseInt(args[4]); final double numEdges = (args.length > 5
+		 * ? (Integer.parseInt(args[5])) : 1); Double c = 0.85; String
+		 * fieldDelimiter = CentralityUtil.TAB_DELIM; if (args.length > 6) {
+		 * fieldDelimiter = (args[6]); } char delim =
+		 * CentralityUtil.checkDelim(fieldDelimiter);
+		 */
 		final ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
-		//env.setDegreeOfParallelism(dop);
+		// env.setDegreeOfParallelism(dop);
 
 		// Read inArcs and outArcs
-		DataSource<String> inputInArc = env
-				.readTextFile(Config.inArcs());
-		
-		DataSet<Tuple2<Long, Long>> srcIncMat = inputInArc.flatMap(new ArcReader());
-		
-		DataSource<String> inputOutArc = env
-				.readTextFile(Config.outArcs());
-		
-		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc.flatMap(new ArcReader());
+		DataSource<String> inputInArc = env.readTextFile(Config.inArcs());
+
+		DataSet<Tuple2<Long, Long>> srcIncMat = inputInArc
+				.flatMap(new ArcReader());
+
+		DataSource<String> inputOutArc = env.readTextFile(Config.outArcs());
+
+		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc
+				.flatMap(new ArcReader());
 
 		/****************************************************
 		 * Computing normalization factors
@@ -83,32 +94,41 @@ public class LineRank {
 						// System.out.println("d-->"+elementwiseInverse.f0+"  "+elementwiseInverse.f1);
 						return elementwiseInverse;
 					}
-					
+
 				}).name("D");
+
+		// Count arcs
+		DataSource<String> inputArc = env
+				.readTextFile(Config.pathToSmallArcs());
+
+		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
+
+		DataSet<Long> numArc = arcs.distinct().reduceGroup(new CountArcs());
+
 		// Initialize random vector with mx1
-		DataSet<Tuple2<Long, Double>> edgeScores = d.map(
-				new InitializeRandomVector(numEdges)).name("V");
+		DataSet<Tuple2<Long, Double>> edgeScores = d
+				.map(new InitializeRandomVector()).name("V")
+				.withBroadcastSet(numArc, "numArc");
 
 		/********************************************************
 		 * Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
 		 ********************************************************/
 
+		int maxIterations = Config.maxIterations();
+
 		IterativeDataSet<Tuple2<Long, Double>> iteration = edgeScores
-				.iterate(maxIterations)
+				.iterate(maxIterations).
 				.registerAggregationConvergenceCriterion(
 						L1_NormDiff.AGGREGATOR_NAME, DoubleSumAggregator.class,
 						L1_NormConvergence.class)
 				.name("EdgeScoreVector_BulkIteration");
 
 		DataSet<Tuple2<Long, Double>> new_edgeScores = iteration.join(d)
-				.where(0).equalTo(0)
-				.with(new V1_HadamardProduct())
+				.where(0).equalTo(0).with(new V1_HadamardProduct())
 				.name("V1")
 				// Hadamard product of v1 <- d * v
-				.join(srcIncMat)
-				.where(0)
-				.equalTo(0)
+				.join(srcIncMat).where(0).equalTo(0)
 				.with(new V2_SrcIncWithV1())
 				.name("V2")
 				// S(G) i.e. mxv becomes => vxm and then vxm X mx1 => vx1
@@ -118,7 +138,8 @@ public class LineRank {
 				// result vx1
 				// .map(new PrintMapper("v2"))
 				.join(tarIncMat).where(0).equalTo(1)
-				.with(new V3_TarIncWithV2(c, numEdges))
+				// c is damping factor
+				.with(new V3_TarIncWithV2()).withBroadcastSet(numArc, "numArc")
 				.name("V3")
 				// .map(new DampingMapper(c, numEdges)) // mxv X vx1 => mx1
 				// .map(new PrintMapper("v3"))
@@ -144,14 +165,14 @@ public class LineRank {
 				.join(partialAggregation_2).where(0).equalTo(0)
 				.with(new EdgeScoreAggregation()).name("EdgeScore_Agg");
 
-		lineRank.writeAsCsv(outputPath, CentralityUtil.NEWLINE,
-				CentralityUtil.TAB_DELIM, WriteMode.OVERWRITE).name(
+		lineRank.writeAsCsv(Config.outputPath(), WriteMode.OVERWRITE).name(
 				"Writing Results");
+		
 		JobExecutionResult job = env.execute();
-		System.out
+		/*System.out
 				.println("Total number of iterations in UnweightedLineRank-->"
 						+ ((job.getIntCounterResult(V2_SrcIncWithV1.ACCUM_LOCAL_ITERATIONS) / dop) - 1));
-		System.out.println("RunTime-->" + ((job.getNetRuntime())) + "sec");
+		System.out.println("RunTime-->" + ((job.getNetRuntime())) + "sec");*/
 	}
 
 	/**
@@ -176,7 +197,7 @@ public class LineRank {
 	 */
 	public static final class L1_NormDiff
 			extends
-			JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>> {
+			RichJoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>> {
 		public static final String AGGREGATOR_NAME = "linerank.aggregator";
 		private DoubleSumAggregator agg;
 
@@ -202,7 +223,7 @@ public class LineRank {
 	@ConstantFieldsSecond("1 -> 0")
 	public static final class V2_SrcIncWithV1
 			extends
-			JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Long>, Tuple2<Long, Double>> {
+			RichJoinFunction<Tuple2<Long, Double>, Tuple2<Long, Long>, Tuple2<Long, Double>> {
 		public static final String ACCUM_LOCAL_ITERATIONS = "accum.local.iterations";
 		private IntCounter localIterations = new IntCounter();
 
@@ -231,7 +252,7 @@ public class LineRank {
 	 */
 	@ConstantFieldsFirst("0->0")
 	public static final class V1_HadamardProduct
-			extends
+			implements
 			JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>> {
 
 		// v1 <- dv Hadamard product
@@ -254,22 +275,22 @@ public class LineRank {
 	@ConstantFields("0")
 	public static final class InitializeRandomVector extends
 			RichMapFunction<Tuple2<Long, Double>, Tuple2<Long, Double>> {
-		private final double fracNumEdges;
-		private double numEdges;
-		
+
+		private long numArc;
+
 		@Override
-		public void open(Configuration parameters) {
-			numEdges = getRuntimeContext().getBroadcastVariable(name);
-		}
-		
-		// random initial vector of size m
-		public InitializeRandomVector(double num) {
-			fracNumEdges = 1 / num;
+		public void open(Configuration parameters) throws Exception {
+			super.open(parameters);
+			numArc = getRuntimeContext().<Long> getBroadcastVariable("numArc")
+					.get(0);
 		}
 
 		@Override
 		public Tuple2<Long, Double> map(Tuple2<Long, Double> value)
 				throws Exception {
+			// random initial vector of size m
+			final double fracNumEdges = 1 / numArc;
+
 			Tuple2<Long, Double> v = new Tuple2<Long, Double>();
 			v.f0 = value.f0;
 			v.f1 = fracNumEdges;
@@ -303,29 +324,31 @@ public class LineRank {
 	@ConstantFieldsSecond("0 -> 0")
 	public static final class V3_TarIncWithV2
 			extends
-			JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Long>, Tuple2<Long, Double>> {
-		private final Double c;
-		private final double randomJump;
+			RichJoinFunction<Tuple2<Long, Double>, Tuple2<Long, Long>, Tuple2<Long, Double>> {
+		private long numArc;
 
-		public V3_TarIncWithV2(Double c, Double numEdges) {
-			this.c = c;
-			this.randomJump = (1 - c) / numEdges;
+		@Override
+		public void open(Configuration parameters) throws Exception {
+			super.open(parameters);
+			numArc = getRuntimeContext().<Long> getBroadcastVariable(
+					"numArc").get(0);
 		}
-
+		
 		@Override
 		public Tuple2<Long, Double> join(Tuple2<Long, Double> first,
 				Tuple2<Long, Long> second) throws Exception {
+			double randomJump = (1 - Config.dampingFactor()) / numArc;
 			Tuple2<Long, Double> result = new Tuple2<Long, Double>();
 
 			result.f0 = second.f0;
-			result.f1 = (first.f1) * c + randomJump;
+			result.f1 = (first.f1) * Config.dampingFactor() + randomJump;
 			return result;
 
 		}
 	}
 
 	public static final class DampingMapper extends
-			MapFunction<Tuple2<Long, Double>, Tuple2<Long, Double>> {
+			RichMapFunction<Tuple2<Long, Double>, Tuple2<Long, Double>> {
 
 		private final double dampening;
 		private final double randomJump;
@@ -366,8 +389,8 @@ public class LineRank {
 	/**
 	 * A reduce operation used as a part of normalization
 	 */
-	public static final class MatrixToVector implements 
-			GroupReduceFunction<Tuple2<Long, Long>, Tuple2<Long, Double>> {		
+	public static final class MatrixToVector implements
+			GroupReduceFunction<Tuple2<Long, Long>, Tuple2<Long, Double>> {
 
 		@Override
 		public void reduce(Iterable<Tuple2<Long, Long>> values,
@@ -377,7 +400,7 @@ public class LineRank {
 			boolean flag = false;
 			Iterator<Tuple2<Long, Long>> iterator = values.iterator();
 			Long key = null;
-			
+
 			while (iterator.hasNext()) {
 				Tuple2<Long, Long> sameRowValues = iterator.next();
 				if (!flag) {
@@ -391,7 +414,7 @@ public class LineRank {
 			toVector.f1 = sum;
 			// System.out.println("d1 -->"+toVector.f0+"  "+toVector.f1);
 			out.collect(toVector);
-			
+
 		}
 
 	}
@@ -403,7 +426,7 @@ public class LineRank {
 	@ConstantFieldsFirst("1 -> 0")
 	@ConstantFieldsSecond("1 -> 1")
 	public static final class AddSrcWithTar
-			extends
+			implements
 			JoinFunction<Tuple2<Long, Long>, Tuple2<Long, Double>, Tuple2<Long, Double>> {
 		@Override
 		public Tuple2<Long, Double> join(Tuple2<Long, Long> matrix,
@@ -420,7 +443,7 @@ public class LineRank {
 	 */
 	@ConstantFieldsFirst("0")
 	public static final class EdgeScoreAggregation
-			extends
+			implements
 			JoinFunction<Tuple2<Long, Double>, Tuple2<Long, Double>, Tuple2<Long, Double>> {
 
 		@Override
@@ -435,4 +458,12 @@ public class LineRank {
 
 	}
 
+	public static class CountArcs implements
+			GroupReduceFunction<Tuple2<Long, Long>, Long> {
+		@Override
+		public void reduce(Iterable<Tuple2<Long, Long>> arcs,
+				Collector<Long> collector) throws Exception {
+			collector.collect(new Long(Iterables.size(arcs)));
+		}
+	}
 }

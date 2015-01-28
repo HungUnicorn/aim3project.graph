@@ -41,4 +41,11 @@ public class Config {
 		return OUTPUT_PATH + "/tmp/outArcs/";
 	}
 	
+	public static int maxIterations(){
+		return 5;
+	}
+	
+	public static double dampingFactor(){
+		return 0.85;
+	}
 }
