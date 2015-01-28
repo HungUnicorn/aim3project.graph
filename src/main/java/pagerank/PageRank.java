@@ -1,29 +1,26 @@
 package pagerank;
 
 import com.google.common.collect.Iterables;
-import org.apache.commons.math.stat.descriptive.summary.Sum;
 import org.apache.flink.api.common.functions.*;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.IterativeDataSet;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.util.Collector;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import javax.xml.crypto.Data;
+import java.util.*;
 
 /**
  * Created by philip on 13.01.15.
  */
 public class PageRank {
 
-    private static final double beta = 0.8d;
-    private static final double epsilon = 0.00001d;
+    private static final double beta = 0.85;
+    private static final double epsilon = 0.0001;
     private static final int maxIterations = 10;
 
     public static void main(String[] args) throws Exception {
@@ -40,11 +37,17 @@ public class PageRank {
         // Get the total count of pages
         DataSet<Long> numPages = pages.reduceGroup(new CountPages());
 
+        // Find sinks
+        DataSet<Tuple1<Long>> noOutgoingLinks = pages.flatMap(new FindSinks()).withBroadcastSet(links.project(0).types(Long.class).distinct(), "pages");
+
+        // Point sinks to all other nodes
+        DataSet<Tuple2<Long, Long>> sinksToAll = noOutgoingLinks.flatMap(new PointToAllOther()).withBroadcastSet(pages, "pages");
+
         // Assign the initial rank to every page - 1 / numPages
         DataSet<Tuple2<Long, Double>> pagesRanked = pages.map(new InitialRanking()).withBroadcastSet(numPages, "numPages");
 
         // Encode sparse adjacency matrix to a list
-        DataSet<Tuple2<Long, Long[]>> sparseMatrix = links.groupBy(0).reduceGroup(new BuildList());
+        DataSet<Tuple2<Long, Long[]>> sparseMatrix = links.union(sinksToAll).groupBy(0).reduceGroup(new BuildList());
 
         // Start iteration - Not using DeltaIteration since the whole DataSet is recomputed
         IterativeDataSet<Tuple2<Long, Double>> iterationSet = pagesRanked.iterate(maxIterations);
@@ -63,7 +66,10 @@ public class PageRank {
                 pageRank,
                 pageRank.join(iterationSet).where(0).equalTo(0).filter(new ConvergenceCondition()));
 
-        results.writeAsText(Config.pathToPageRank(), FileSystem.WriteMode.OVERWRITE);
+        // results.writeAsText(Config.pathToPageRank(), FileSystem.WriteMode.OVERWRITE);
+
+        results.sum(1).print();
+
         env.execute();
     }
 
@@ -93,6 +99,52 @@ public class PageRank {
         @Override
         public void reduce(Iterable<Tuple1<Long>> pages, Collector<Long> collector) throws Exception {
             collector.collect(new Long(Iterables.size(pages)));
+        }
+    }
+
+    // Class to find sinks within the graph
+    public static class FindSinks extends RichFlatMapFunction<Tuple1<Long>, Tuple1<Long>> {
+        private HashSet<Long> withOutgoingLinks = new HashSet<Long>();
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            super.open(parameters);
+
+            Iterator pages = getRuntimeContext().getBroadcastVariable("pages").iterator();
+            while(pages.hasNext()) {
+                Tuple1<Long> tmp = (Tuple1<Long>) pages.next();
+                withOutgoingLinks.add(tmp.f0);
+            }
+        }
+
+        @Override
+        public void flatMap(Tuple1<Long> page, Collector<Tuple1<Long>> collector) throws Exception {
+            if(!withOutgoingLinks.contains(page.f0)) {
+                collector.collect(page);
+            }
+        }
+    }
+
+    // Class that points all sinks to all other nodes
+    public static class PointToAllOther extends RichFlatMapFunction<Tuple1<Long>, Tuple2<Long, Long>> {
+        private ArrayList<Long> allPages = new ArrayList<Long>();
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            super.open(parameters);
+
+            Iterator pages = getRuntimeContext().getBroadcastVariable("pages").iterator();
+            while(pages.hasNext()) {
+                Tuple1<Long> tmp = (Tuple1<Long>) pages.next();
+                allPages.add(tmp.f0);
+            }
+        }
+
+        @Override
+        public void flatMap(Tuple1<Long> sink, Collector<Tuple2<Long, Long>> collector) throws Exception {
+            for (int i=0; i < allPages.size(); i++) {
+                collector.collect(new Tuple2<Long, Long>(sink.f0, allPages.get(i)));
+            }
         }
     }
 
