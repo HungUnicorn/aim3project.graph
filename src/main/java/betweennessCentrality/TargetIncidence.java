@@ -9,7 +9,7 @@ import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.core.fs.FileSystem.WriteMode;
+import org.apache.flink.core.fs.FileSystem;
 
 import betweennessCentrality.SourceIncidence.ArcReader;
 
@@ -47,7 +47,8 @@ public class TargetIncidence {
 		DataSet<Tuple3<Long, Long, Double>> tarIncMat = arcs.map(new TargetIncMatrix())
 				.name("T(G)");
 
-		tarIncMat.writeAsText(Config.outArcs(), WriteMode.OVERWRITE);
+		tarIncMat.writeAsCsv(Config.outArcs(), "\n", "\t",
+				FileSystem.WriteMode.OVERWRITE);
 		JobExecutionResult job = env.execute();
 		/*System.out.println("RunTime-->" + ((job.getNetRuntime() / 1000))
 				+ "sec");*/

@@ -11,6 +11,7 @@ import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
@@ -44,7 +45,8 @@ public class SourceIncidence {
 		DataSet<Tuple3<Long, Long, Double>> srcIncMat = arcs
 				.map(new SourceIncMatrix()).name("S(G)");
 
-		srcIncMat.writeAsText(Config.inArcs(), WriteMode.OVERWRITE);
+		srcIncMat.writeAsCsv(Config.inArcs(), "\n", "\t",
+				FileSystem.WriteMode.OVERWRITE);
 
 		env.execute();
 		// System.out.println("RunTime-->"+ ((job.getNetRuntime()/1000))+"sec");

@@ -1,6 +1,7 @@
 package betweennessCentrality;
 
 import java.util.Iterator;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.JobExecutionResult;
@@ -57,7 +58,7 @@ public class LineRank {
 				.getExecutionEnvironment();
 		// env.setDegreeOfParallelism(dop);
 
-		// Read inArcs and outArcs							
+		// Read inArcs and outArcs
 		DataSource<String> inputInArc = env.readTextFile(Config.inArcs());
 
 		DataSet<Tuple2<Long, Long>> srcIncMat = inputInArc
@@ -479,19 +480,20 @@ public class LineRank {
 	public static class IncidenceArcReader implements
 			FlatMapFunction<String, Tuple2<Long, Long>> {
 
-		private static final Pattern SEPARATOR = Pattern.compile("[( \t,)]");
+		private static final Pattern SEPARATOR = Pattern
+				.compile("[ \t,]");
 
 		@Override
 		public void flatMap(String s, Collector<Tuple2<Long, Long>> collector)
 				throws Exception {
-			if (!s.startsWith("%")) {				
-				String[] tokens = SEPARATOR.split(s);
+			if (!s.startsWith("%")) {
 
+				String[] tokens = SEPARATOR.split(s);
 				long arcId = Long.parseLong(tokens[0]);
 				long node = Long.parseLong(tokens[1]);
-				//long weight = Long.parseLong(tokens[2]);
-
+				// long weight = Long.parseLong(tokens[2]);
 				collector.collect(new Tuple2<Long, Long>(arcId, node));
+
 			}
 		}
 	}
