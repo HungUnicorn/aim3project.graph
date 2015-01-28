@@ -1,6 +1,7 @@
 package betweennessCentrality;
 
 import java.util.Iterator;
+import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.accumulators.IntCounter;
@@ -20,17 +21,15 @@ import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsFirs
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSecond;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.IterativeDataSet;
-import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.types.DoubleValue;
 import org.apache.flink.util.Collector;
 
-import com.google.common.collect.Iterables;
-
-import betweennessCentrality.Config;
 import betweennessCentrality.SourceIncidence.ArcReader;
+
+import com.google.common.collect.Iterables;
 
 // Generates the importance of arcs and determine which nodes are more important
 // based on the importance of arcs those node have.
@@ -58,16 +57,16 @@ public class LineRank {
 				.getExecutionEnvironment();
 		// env.setDegreeOfParallelism(dop);
 
-		// Read inArcs and outArcs
+		// Read inArcs and outArcs							
 		DataSource<String> inputInArc = env.readTextFile(Config.inArcs());
 
 		DataSet<Tuple2<Long, Long>> srcIncMat = inputInArc
-				.flatMap(new ArcReader());
+				.flatMap(new IncidenceArcReader());
 
 		DataSource<String> inputOutArc = env.readTextFile(Config.outArcs());
 
 		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc
-				.flatMap(new ArcReader());
+				.flatMap(new IncidenceArcReader());
 
 		/****************************************************
 		 * Computing normalization factors
@@ -117,18 +116,25 @@ public class LineRank {
 
 		int maxIterations = Config.maxIterations();
 
+		DoubleSumAggregator agg = new DoubleSumAggregator();
+
 		IterativeDataSet<Tuple2<Long, Double>> iteration = edgeScores
-				.iterate(maxIterations).
+				.iterate(maxIterations)
 				.registerAggregationConvergenceCriterion(
-						L1_NormDiff.AGGREGATOR_NAME, DoubleSumAggregator.class,
-						L1_NormConvergence.class)
+						L1_NormDiff.AGGREGATOR_NAME, agg,
+						new L1_NormConvergence())
 				.name("EdgeScoreVector_BulkIteration");
 
-		DataSet<Tuple2<Long, Double>> new_edgeScores = iteration.join(d)
-				.where(0).equalTo(0).with(new V1_HadamardProduct())
+		DataSet<Tuple2<Long, Double>> new_edgeScores = iteration
+				.join(d)
+				.where(0)
+				.equalTo(0)
+				.with(new V1_HadamardProduct())
 				.name("V1")
 				// Hadamard product of v1 <- d * v
-				.join(srcIncMat).where(0).equalTo(0)
+				.join(srcIncMat)
+				.where(0)
+				.equalTo(0)
 				.with(new V2_SrcIncWithV1())
 				.name("V2")
 				// S(G) i.e. mxv becomes => vxm and then vxm X mx1 => vx1
@@ -137,9 +143,11 @@ public class LineRank {
 				// Sum followed by product in matrix vector multiplication would
 				// result vx1
 				// .map(new PrintMapper("v2"))
-				.join(tarIncMat).where(0).equalTo(1)
+				.join(tarIncMat).where(0)
+				.equalTo(1)
 				// c is damping factor
-				.with(new V3_TarIncWithV2()).withBroadcastSet(numArc, "numArc")
+				.with(new V3_TarIncWithV2())
+				.withBroadcastSet(numArc, "numArc")
 				.name("V3")
 				// .map(new DampingMapper(c, numEdges)) // mxv X vx1 => mx1
 				// .map(new PrintMapper("v3"))
@@ -167,12 +175,15 @@ public class LineRank {
 
 		lineRank.writeAsCsv(Config.outputPath(), WriteMode.OVERWRITE).name(
 				"Writing Results");
-		
+
 		JobExecutionResult job = env.execute();
-		/*System.out
-				.println("Total number of iterations in UnweightedLineRank-->"
-						+ ((job.getIntCounterResult(V2_SrcIncWithV1.ACCUM_LOCAL_ITERATIONS) / dop) - 1));
-		System.out.println("RunTime-->" + ((job.getNetRuntime())) + "sec");*/
+		/*
+		 * System.out
+		 * .println("Total number of iterations in UnweightedLineRank-->" +
+		 * ((job.getIntCounterResult(V2_SrcIncWithV1.ACCUM_LOCAL_ITERATIONS) /
+		 * dop) - 1)); System.out.println("RunTime-->" + ((job.getNetRuntime()))
+		 * + "sec");
+		 */
 	}
 
 	/**
@@ -181,13 +192,11 @@ public class LineRank {
 	 */
 	public static final class L1_NormConvergence implements
 			ConvergenceCriterion<DoubleValue> {
-
-		private static final double EPSILON = 0.00001;
-
+		@Override
 		public boolean isConverged(int iteration, DoubleValue value) {
 			double diff = value.getValue();
 			// System.out.println("inside check");
-			return diff < EPSILON;
+			return diff < Config.episolon();
 		}
 	}
 
@@ -330,10 +339,10 @@ public class LineRank {
 		@Override
 		public void open(Configuration parameters) throws Exception {
 			super.open(parameters);
-			numArc = getRuntimeContext().<Long> getBroadcastVariable(
-					"numArc").get(0);
+			numArc = getRuntimeContext().<Long> getBroadcastVariable("numArc")
+					.get(0);
 		}
-		
+
 		@Override
 		public Tuple2<Long, Double> join(Tuple2<Long, Double> first,
 				Tuple2<Long, Long> second) throws Exception {
@@ -464,6 +473,26 @@ public class LineRank {
 		public void reduce(Iterable<Tuple2<Long, Long>> arcs,
 				Collector<Long> collector) throws Exception {
 			collector.collect(new Long(Iterables.size(arcs)));
+		}
+	}
+
+	public static class IncidenceArcReader implements
+			FlatMapFunction<String, Tuple2<Long, Long>> {
+
+		private static final Pattern SEPARATOR = Pattern.compile("[( \t,)]");
+
+		@Override
+		public void flatMap(String s, Collector<Tuple2<Long, Long>> collector)
+				throws Exception {
+			if (!s.startsWith("%")) {				
+				String[] tokens = SEPARATOR.split(s);
+
+				long arcId = Long.parseLong(tokens[0]);
+				long node = Long.parseLong(tokens[1]);
+				//long weight = Long.parseLong(tokens[2]);
+
+				collector.collect(new Tuple2<Long, Long>(arcId, node));
+			}
 		}
 	}
 }

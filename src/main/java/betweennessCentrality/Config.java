@@ -34,7 +34,7 @@ public class Config {
 	}
 	
 	public static String inArcs() {
-		return OUTPUT_PATH + "/tmp/incArcs/";
+		return OUTPUT_PATH + "/tmp/inArcs/";
 	}
 	
 	public static String outArcs() {
@@ -48,4 +48,9 @@ public class Config {
 	public static double dampingFactor(){
 		return 0.85;
 	}
+	
+	public static double episolon(){
+		return 0.0001;
+	}
+	
 }
