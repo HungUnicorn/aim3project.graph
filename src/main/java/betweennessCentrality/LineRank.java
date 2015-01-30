@@ -32,9 +32,12 @@ import betweennessCentrality.SourceIncidence.ArcReader;
 
 import com.google.common.collect.Iterables;
 
-// Generates the importance of arcs and determine which nodes are more important
-// based on the importance of arcs those node have.
-// Computing the importance of arcs are similar to PageRank
+/* Generates the importance of arcs and determine which nodes are more important based on the importance of arcs those node have.
+Computing the importance of arcs are similar to PageRank
+1. Generate Line Graph
+2. Compute eigenvector of line Graph
+3. Collect the importance of node by the importance of edges connects to that node
+*/
 
 public class LineRank {
 	@SuppressWarnings("serial")

@@ -3,27 +3,32 @@ package closenessCentrality;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
-public class FMCounter {
-	/**
-	 * 
-	 */
+
+/* Flajolet-Martin Sketch: Count distinct number of values
+in a sequence in one pass with minimum memory 
+THe main usage is getCount()
+
+Iteratively updates the Flajolet-Martin (FM) bitstrings for every node.
+*let b(r - 1; v) be node v’s bitstring encoding the set of nodes within distance
+r - 1. Then the next-step bitstring b(r; v) is computed by BITWISE-OR the current bitstring b(r - 1; v) of v and
+the current bitstrings of the neighbors of v.
+*/
+public class CountDistinctElements {
+	
 	public final static int NUM_BUCKETS = 32;
 	private final static double MAGIC_CONSTANT = 0.77351;
 	private int[] buckets;
 
-	/**
-	 * Create a zero-bucket FM-Sketch. This is needed because Giraph requires a
-	 * no-argument constructor.
-	 */
-	public FMCounter() {
+	/*Create a zero-bucket FM-Sketch. This is needed because Giraph requires a
+	 * no-argument constructor.*/
+	public CountDistinctElements() {
 		this.buckets = new int[NUM_BUCKETS];
 	}
 
-	/**
-	 * Create a copy of the FM-Sketch by copying the internal integer array.
+	/*Create a copy of the FM-Sketch by copying the internal integer array.
 	 */
-	public FMCounter copy() {
-		FMCounter result = new FMCounter();
+	public CountDistinctElements copy() {
+		CountDistinctElements result = new CountDistinctElements();
 		result.buckets = Arrays.copyOf(this.buckets, this.buckets.length);
 		return result;
 	}
@@ -65,6 +70,7 @@ public class FMCounter {
 		for (int i = start; i < end; i++) {
 			S += sorted[i];
 		}
+		
 		int count = (int) (Math.pow(2.0, (double) S
 				/(double) size) / MAGIC_CONSTANT);
 		return count;
@@ -73,10 +79,10 @@ public class FMCounter {
 	/**
 	 * Merge this FM-Sketch with the other one.
 	 */
-	public void merge(FMCounter other) {
-		Preconditions.checkArgument(other instanceof FMCounter,
+	public void merge(CountDistinctElements other) {
+		Preconditions.checkArgument(other instanceof CountDistinctElements,
 			"Other is not a FMCounterWritable.");
-		FMCounter otherB = (FMCounter) other;
+		CountDistinctElements otherB = (CountDistinctElements) other;
 		Preconditions.checkState(this.buckets.length == otherB.buckets.length,
 			"Number of buckets does not match.");
 		for (int i = 0; i < buckets.length; ++i) {

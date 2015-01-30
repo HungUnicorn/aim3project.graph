@@ -28,14 +28,23 @@ import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
 
-
-/**
+/*
  * Efficient closeness computation from Centralities in Large Networks:
- * Algorithms and Observations. Closeness is based on the length of the average
+ * Algorithms and Observations. 
+ * 
+ * Closeness is based on the length of the average
  * shortest path between a node and all other nodes in the network
  * 
+ * To compute a node's closeness, in each step, it sums #neighbors
+ * the distance = step i * #neighbors, 1 step represent 1 hop from the start node  
+ * 
+ * Main benefit is it estimates #neighbors by Flajolet-Martin Sketch
+ * 
+ * A concrete execution is as follows:
  * 1. Sum distance for each node iteratively and output <vertexId, bit[], sum>
- * bit[] records the neighbors of node 2. Avg((n-1)/sum) for each node and
+ * bit[] records the neighbors of node 
+ * 
+ * 2. Avg((n-1)/sum) for each node and (larger sum(distance) means this node needs more hop to other nodes)
  * output <nodeID, closeness>
  */
 
@@ -56,12 +65,12 @@ public class Closeness {
 		DataSet<Tuple2<String, Long>> nodes = inputNode
 				.flatMap(new NodeReader());
 
-		DataSet<Tuple3<Long, FMCounter, Double>> initialSolutionSet = nodes
+		DataSet<Tuple3<Long, CountDistinctElements, Double>> initialSolutionSet = nodes
 				.flatMap(new AssignBitArrayToVertices()).name(
 						"Assign BitArray to Vertex");
 
 		// Initial vertices is both workset and solutionset
-		DataSet<Tuple3<Long, FMCounter, Double>> initialworkingSet = initialSolutionSet;
+		DataSet<Tuple3<Long, CountDistinctElements, Double>> initialworkingSet = initialSolutionSet;
 
 		DataSource<String> inputArc = env
 				.readTextFile(Config.pathToSmallArcs());
@@ -72,30 +81,30 @@ public class Closeness {
 		int maxIterations = 10;
 		int keyPosition = 0;
 
-		DeltaIteration<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> deltaIteration = initialSolutionSet
+		DeltaIteration<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> deltaIteration = initialSolutionSet
 				.iterateDelta(initialworkingSet, maxIterations, keyPosition);
 		// Step Function: SendMsg and BitwiseOR
 		// Update Function: FilterCovergeNodes
 
 		// Send message to neighbors and record in bit_string
-		DataSet<Tuple3<Long, FMCounter, Double>> neighbors = deltaIteration
+		DataSet<Tuple3<Long, CountDistinctElements, Double>> neighbors = deltaIteration
 				.getWorkset().join(arcs).where(0).equalTo(1)
 				.with(new SendingMessageToNeighbors())
 				.name("Sending Message To Neighbors");
 
 		// Collect sent neighbors by bitwiseOr bit_string
-		GroupReduceOperator<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> bitwiseOR = neighbors
+		GroupReduceOperator<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> bitwiseOR = neighbors
 				.groupBy(0).reduceGroup(new PartialBitwiseOR())
 				.name("BitwiseOR");
 
 		// Get next WorkSet
-		DataSet<Tuple3<Long, FMCounter, Double>> candidateUpdates = bitwiseOR
+		DataSet<Tuple3<Long, CountDistinctElements, Double>> candidateUpdates = bitwiseOR
 				.join(deltaIteration.getSolutionSet()).where(0).equalTo(0)
 				.with(new FilterConvergedNodes())
 				.name("Filters Converged Vertices");
 
 		// Termination: no change after iterative computation
-		DataSet<Tuple3<Long, FMCounter, Double>> finalSolnSet = deltaIteration
+		DataSet<Tuple3<Long, CountDistinctElements, Double>> finalSolnSet = deltaIteration
 				.closeWith(candidateUpdates, candidateUpdates);
 
 		// Create a dataset of all node ids and count them
@@ -110,13 +119,13 @@ public class Closeness {
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
 		closeness.writeAsText(Config.outputPath(), WriteMode.OVERWRITE);
-		
-		/*DataSet<Tuple3<String, Long, Double>> nodewithName = closeness
-				.join(nodes).where(0).equalTo(1)
-				.flatMap(new ProjectNodeWithName());
 
-		nodewithName.print();*/
 		
+		/* DataSet<Tuple3<String, Long, Double>> nodewithName = closeness
+		  .join(nodes).where(0).equalTo(1) .flatMap(new ProjectNodeWithName());
+		  
+		  nodewithName.print();*/
+		 
 
 		env.execute();
 	}
@@ -124,7 +133,7 @@ public class Closeness {
 	@ConstantFields("0")
 	public static final class AverageComputation
 			extends
-			RichMapFunction<Tuple3<Long, FMCounter, Double>, Tuple2<Long, Double>> {
+			RichMapFunction<Tuple3<Long, CountDistinctElements, Double>, Tuple2<Long, Double>> {
 		private long numVertices;
 
 		@Override
@@ -137,7 +146,8 @@ public class Closeness {
 		Double closeness = 0.0;
 
 		@Override
-		public Tuple2<Long, Double> map(Tuple3<Long, FMCounter, Double> value)
+		public Tuple2<Long, Double> map(
+				Tuple3<Long, CountDistinctElements, Double> value)
 				throws Exception {
 			if (value.f2 > 0) {
 				closeness = value.f2 / (numVertices - 1);
@@ -153,15 +163,15 @@ public class Closeness {
 	@ConstantFields("0")
 	public static final class AssignBitArrayToVertices
 			implements
-			FlatMapFunction<Tuple2<String, Long>, Tuple3<Long, FMCounter, Double>> {
+			FlatMapFunction<Tuple2<String, Long>, Tuple3<Long, CountDistinctElements, Double>> {
 
 		@Override
 		public void flatMap(Tuple2<String, Long> value,
-				Collector<Tuple3<Long, FMCounter, Double>> out)
+				Collector<Tuple3<Long, CountDistinctElements, Double>> out)
 				throws Exception {
-			FMCounter counter = new FMCounter();
+			CountDistinctElements counter = new CountDistinctElements();
 			counter.addNode(value.f1.intValue());
-			Tuple3<Long, FMCounter, Double> result = new Tuple3<Long, FMCounter, Double>();
+			Tuple3<Long, CountDistinctElements, Double> result = new Tuple3<Long, CountDistinctElements, Double>();
 			result.f0 = value.f1;
 			result.f1 = counter;
 			result.f2 = 0.0;
@@ -174,7 +184,7 @@ public class Closeness {
 	@ConstantFieldsSecond("0 -> 0")
 	public static final class SendingMessageToNeighbors
 			extends
-			RichJoinFunction<Tuple3<Long, FMCounter, Double>, Tuple2<Long, Long>, Tuple3<Long, FMCounter, Double>> {
+			RichJoinFunction<Tuple3<Long, CountDistinctElements, Double>, Tuple2<Long, Long>, Tuple3<Long, CountDistinctElements, Double>> {
 		public static final String ACCUM_LOCAL_ITERATIONS = "accum.local.iterations";
 		private IntCounter localIterations = new IntCounter();
 
@@ -186,11 +196,11 @@ public class Closeness {
 		}
 
 		@Override
-		public Tuple3<Long, FMCounter, Double> join(
-				Tuple3<Long, FMCounter, Double> vertex_workset,
+		public Tuple3<Long, CountDistinctElements, Double> join(
+				Tuple3<Long, CountDistinctElements, Double> vertex_workset,
 				Tuple2<Long, Long> neighbors) throws Exception {
 
-			Tuple3<Long, FMCounter, Double> output = new Tuple3<Long, FMCounter, Double>();
+			Tuple3<Long, CountDistinctElements, Double> output = new Tuple3<Long, CountDistinctElements, Double>();
 			output.f0 = neighbors.f0;
 			output.f1 = vertex_workset.f1;
 			output.f2 = vertex_workset.f2;
@@ -201,28 +211,29 @@ public class Closeness {
 
 	public static final class PartialBitwiseOR
 			extends
-			RichGroupReduceFunction<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> {
+			RichGroupReduceFunction<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> {
 
 		@Override
-		public void reduce(Iterable<Tuple3<Long, FMCounter, Double>> values,
-				Collector<Tuple3<Long, FMCounter, Double>> out)
+		public void reduce(
+				Iterable<Tuple3<Long, CountDistinctElements, Double>> values,
+				Collector<Tuple3<Long, CountDistinctElements, Double>> out)
 				throws Exception {
 
-			Iterator<Tuple3<Long, FMCounter, Double>> iterator = values
+			Iterator<Tuple3<Long, CountDistinctElements, Double>> iterator = values
 					.iterator();
-			Tuple3<Long, FMCounter, Double> first;
+			Tuple3<Long, CountDistinctElements, Double> first;
 
 			first = iterator.next();
 			Long ver = first.f0;
 			Double sum = first.f2;
-			FMCounter counter = first.f1.copy();
+			CountDistinctElements counter = first.f1.copy();
 
 			while (iterator.hasNext()) {
 				counter.merge(iterator.next().f1);
 			}
 			// System.out.println("Getting all bitstrings of adjacent vertices of "+ver+" and its count now --->"+counter.getCount()+"   at step "+getIterationRuntimeContext().getSuperstepNumber());
 
-			Tuple3<Long, FMCounter, Double> result = new Tuple3<Long, FMCounter, Double>();
+			Tuple3<Long, CountDistinctElements, Double> result = new Tuple3<Long, CountDistinctElements, Double>();
 			result.f0 = ver;
 			result.f1 = counter;
 			result.f2 = sum;
@@ -230,24 +241,25 @@ public class Closeness {
 		}
 
 		@Override
-		public void combine(Iterable<Tuple3<Long, FMCounter, Double>> values,
-				Collector<Tuple3<Long, FMCounter, Double>> out)
+		public void combine(
+				Iterable<Tuple3<Long, CountDistinctElements, Double>> values,
+				Collector<Tuple3<Long, CountDistinctElements, Double>> out)
 				throws Exception {
 
-			Iterator<Tuple3<Long, FMCounter, Double>> iterator = values
+			Iterator<Tuple3<Long, CountDistinctElements, Double>> iterator = values
 					.iterator();
 
-			Tuple3<Long, FMCounter, Double> first = iterator.next();
+			Tuple3<Long, CountDistinctElements, Double> first = iterator.next();
 			Long ver = first.f0;
 			Double sum = first.f2;
-			FMCounter counter = first.f1.copy();
+			CountDistinctElements counter = first.f1.copy();
 
 			while (iterator.hasNext()) {
 				counter.merge(iterator.next().f1);
 			}
 			// System.out.println("Getting all bitstrings of adjacent vertices of "+ver+" and its count now --->"+counter.getCount()+"   at step "+getIterationRuntimeContext().getSuperstepNumber());
 
-			Tuple3<Long, FMCounter, Double> result = new Tuple3<Long, FMCounter, Double>();
+			Tuple3<Long, CountDistinctElements, Double> result = new Tuple3<Long, CountDistinctElements, Double>();
 			result.f0 = ver;
 			result.f1 = counter;
 			result.f2 = sum;
@@ -258,7 +270,7 @@ public class Closeness {
 
 	public static final class FilterConvergedNodes
 			extends
-			RichJoinFunction<Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>, Tuple3<Long, FMCounter, Double>> {
+			RichJoinFunction<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> {
 		long NumNode_before;
 		long NumNode_after;
 		long diff;
@@ -278,19 +290,20 @@ public class Closeness {
 		}
 
 		@Override
-		public Tuple3<Long, FMCounter, Double> join(
-				Tuple3<Long, FMCounter, Double> current,
-				Tuple3<Long, FMCounter, Double> previous) {
+		public Tuple3<Long, CountDistinctElements, Double> join(
+				Tuple3<Long, CountDistinctElements, Double> current,
+				Tuple3<Long, CountDistinctElements, Double> previous) {
 
 			iterationNumber = getIterationRuntimeContext().getSuperstepNumber();
 
-			FMCounter prevFm = previous.f1;
-			FMCounter currFm = current.f1;
+			CountDistinctElements prevFm = previous.f1;
+			CountDistinctElements currFm = current.f1;
 
-			NumNode_before = ((closenessCentrality.FMCounter) prevFm)
+			NumNode_before = ((closenessCentrality.CountDistinctElements) prevFm)
 					.getCount();
 			(currFm).merge(prevFm);
-			NumNode_after = ((closenessCentrality.FMCounter) currFm).getCount();
+			NumNode_after = ((closenessCentrality.CountDistinctElements) currFm)
+					.getCount();
 
 			if (NumNode_before != NumNode_after) {
 				sum = (java.lang.Double) previous.f2;

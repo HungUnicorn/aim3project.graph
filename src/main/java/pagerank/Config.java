@@ -7,8 +7,8 @@ public class Config {
 
     private Config() { }
 
-    private static final String INPUT_PATH = "/home/philip/Dokumente/aim3project.graph/src/test/resources/";
-    private static final String OUTPUT_PATH = "/home/philip/Dokumente/aim3project.graph/src/test/resources/analysis/";
+    private static final String INPUT_PATH = "/home/hung/aim3project.graph/src/test/resources/";
+    private static final String OUTPUT_PATH = "/home/hung/aim3project.graph/src/test/resources/analysis/";
 
     public static String pathToSmallPages() {
         return INPUT_PATH + "smallGraph/example_index";

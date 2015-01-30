@@ -1,6 +1,7 @@
 package pagerank;
 
 import com.google.common.collect.Iterables;
+
 import org.apache.flink.api.common.functions.*;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -9,9 +10,11 @@ import org.apache.flink.api.java.operators.IterativeDataSet;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
 import javax.xml.crypto.Data;
+
 import java.util.*;
 
 /**
@@ -66,9 +69,9 @@ public class PageRank {
                 pageRank,
                 pageRank.join(iterationSet).where(0).equalTo(0).filter(new ConvergenceCondition()));
 
-        // results.writeAsText(Config.pathToPageRank(), FileSystem.WriteMode.OVERWRITE);
+        results.writeAsText(Config.pathToPageRank(), WriteMode.OVERWRITE);
 
-        results.sum(1).print();
+        //results.sum(1).print();
 
         env.execute();
     }
