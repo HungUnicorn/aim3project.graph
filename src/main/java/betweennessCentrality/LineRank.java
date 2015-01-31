@@ -32,12 +32,23 @@ import betweennessCentrality.SourceIncidence.ArcReader;
 
 import com.google.common.collect.Iterables;
 
-/* Generates the importance of arcs and determine which nodes are more important based on the importance of arcs those node have.
-Computing the importance of arcs are similar to PageRank
-1. Generate Line Graph
-2. Compute eigenvector of line Graph
-3. Collect the importance of node by the importance of edges connects to that node
-*/
+/* Betweenness: How many pairs of individuals would have to go through you in order to reach one
+ another in the minimum number of hops, i.e measure the importance of a node by aggregating the importance score of its incident edges
+ Computing the importance of arcs are similar to PageRank
+
+ The code runs as following 
+ 1.Building Incidence Matrices. We first construct the incident
+ matrices S(G) and T(G) from the sparse adjacency matrix 
+ 2.Computing Normalization Factors. 1/The ith element of the
+ diagonal matrix D contains the sum of ith column of L(G).
+ D is used to column-normalize L(G) so that the resulting
+ matrix can be used for the power iteration. 
+ 3.Random Walk on the Line Graph. 
+ 4.Final LINERANK Score. The edge scores are summed up get the final LINERANK score for each node
+
+ *Because Line graph is too big, using two sparse matrices instead materializing Line graph.
+ *L(G) = S(G) x T(G)
+ */
 
 public class LineRank {
 	@SuppressWarnings("serial")
@@ -112,7 +123,7 @@ public class LineRank {
 		DataSet<Tuple2<Long, Double>> edgeScores = d
 				.map(new InitializeRandomVector()).name("V")
 				.withBroadcastSet(numArc, "numArc");
-
+		d.print();
 		/********************************************************
 		 * Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
@@ -483,8 +494,7 @@ public class LineRank {
 	public static class IncidenceArcReader implements
 			FlatMapFunction<String, Tuple2<Long, Long>> {
 
-		private static final Pattern SEPARATOR = Pattern
-				.compile("[ \t,]");
+		private static final Pattern SEPARATOR = Pattern.compile("[ \t,]");
 
 		@Override
 		public void flatMap(String s, Collector<Tuple2<Long, Long>> collector)

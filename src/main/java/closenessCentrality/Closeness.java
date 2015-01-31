@@ -34,6 +34,8 @@ import com.google.common.collect.Iterables;
  * 
  * Closeness is based on the length of the average
  * shortest path between a node and all other nodes in the network
+ * Assumption:view graph as undirected (Hierarchical closeness(2014) solves this limitation)
+ * 
  * 
  * To compute a node's closeness, in each step, it sums #neighbors
  * the distance = step i * #neighbors, 1 step represent 1 hop from the start node  

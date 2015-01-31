@@ -13,7 +13,13 @@ import org.apache.flink.core.fs.FileSystem;
 
 import betweennessCentrality.SourceIncidence.ArcReader;
 
-// generate out-arcs for LineRank
+/* Line Graph Decomposition
+ * Generate out-arcs for sparse Line Graph
+ * 
+ * 1->2, 1->3 will generate
+edge1, 2
+edge2, 3 
+ */
 
 public class TargetIncidence {
 

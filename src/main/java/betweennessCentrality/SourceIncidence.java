@@ -15,7 +15,12 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
-// Generate the in-arcs file for LineRank
+/* Line Graph Decomposition
+ * Generate the in-arcs file for sparse Line Graph 
+ 1->2, 1->3 will generate
+edge1, 1
+edge2, 2 
+*/
 
 public class SourceIncidence {
 	public static void main(String[] args) throws Exception {
