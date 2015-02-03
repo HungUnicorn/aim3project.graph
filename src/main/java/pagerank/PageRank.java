@@ -22,19 +22,26 @@ import java.util.*;
  */
 public class PageRank {
 
-    private static final double beta = 0.85;
-    private static final double epsilon = 0.0001;
-    private static final int maxIterations = 10;
+    private static double beta = 0.0;
+    private static double epsilon = 0.0;
+    private static int maxIterations = 0;
+
+    private static String argPathToIndex = "";
+    private static String argPathToArc = "";
+    private static String argPathOut = "";
+
 
     public static void main(String[] args) throws Exception {
+
+        if(!parseParameters(args)) { return; }
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
         // Read the input files - pages and links
-        DataSource<String> inputPages = env.readTextFile(Config.pathToSmallPages());
+        DataSource<String> inputPages = env.readTextFile(argPathToIndex);
         DataSet<Tuple1<Long>> pages = inputPages.flatMap(new PageReader());
 
-        DataSource<String> inputLinks = env.readTextFile(Config.pathToSmallLinks());
+        DataSource<String> inputLinks = env.readTextFile(argPathToArc);
         DataSet<Tuple2<Long, Long>> links = inputLinks.flatMap(new LinkReader());
 
         // Get the total count of pages
@@ -69,9 +76,7 @@ public class PageRank {
                 pageRank,
                 pageRank.join(iterationSet).where(0).equalTo(0).filter(new ConvergenceCondition()));
 
-        results.writeAsText(Config.pathToPageRank(), WriteMode.OVERWRITE);
-
-        //results.sum(1).print();
+        results.writeAsText(argPathOut, WriteMode.OVERWRITE);
 
         env.execute();
     }
@@ -221,5 +226,23 @@ public class PageRank {
         public boolean filter(Tuple2<Tuple2<Long, Double>, Tuple2<Long, Double>> value) throws Exception {
             return Math.abs(value.f0.f1 - value.f1.f1) > epsilon;
         }
+    }
+
+    public static boolean parseParameters(String[] args) {
+
+        if(args.length < 6 || args.length > 6) {
+            System.err.println("Usage: [path to index file] [path to arc file] [output path] [beta] [epsilon] [max iterations]");
+            return false;
+        }
+
+        argPathToIndex = args[0];
+        argPathToArc = args[1];
+        argPathOut = args[2];
+
+        beta = Double.parseDouble(args[3]);
+        epsilon = Double.parseDouble(args[4]);
+        maxIterations = Integer.parseInt(args[5]);
+
+        return true;
     }
 }
