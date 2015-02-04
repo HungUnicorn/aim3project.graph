@@ -1,10 +1,11 @@
 #Analysis of Graph Structure in the Web Using Apache Flink 
+Parallel graph algorithms run on  3.5 billion web pages and 128 billion hyperlinks,
+including degree, PageRank, closeness and betweenness
+
 ######Work with: [Philip](https://github.com/philip-raschke)
 =================
 ###The dataset is used, the hyperlink graph of 2012
 http://webdatacommons.org/hyperlinkgraph/2012-08/download.html
-
-Parallel analysis algorithm includes degree, PageRank, closeness and betweenness
 
 ###Reference
 Algorithms in Scala 
