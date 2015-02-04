@@ -16,6 +16,7 @@ import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
 /*TopK: 
@@ -32,22 +33,25 @@ import org.apache.flink.util.Collector;
 
 public class TopKOutDegree {
 
+	private static int topK = 10;
+	private static int degreeFilter = 0;
+
+	private static String argPathToIndex = "";
+	private static String argPathToArc = "";
+	private static String argPathOut = "";
+
 	public static void main(String[] args) throws Exception {
+
+		if (!parseParameters(args)) {
+			return;
+		}
 
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		/*
-		 * DataSource<String> inputArc = env
-		 * .readTextFile(Config.pathToSmallArcs());
-		 * 
-		 * DataSource<String> inputIndex = env.readTextFile(Config
-		 * .pathToSmallIndex());
-		 */
-		DataSource<String> inputArc = env.readTextFile(Config.pathToBigArcs());
+		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
-		DataSource<String> inputIndex = env.readTextFile(Config
-				.pathToBigIndex());
+		DataSource<String> inputIndex = env.readTextFile(argPathToIndex);
 
 		DataSet<Tuple2<String, Long>> nodes = inputIndex
 				.flatMap(new NodeReader());
@@ -59,24 +63,23 @@ public class TopKOutDegree {
 		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(0)
 				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
 
+		// Focus on the nodes' degree higher than average degree
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
 				.filter(new DegreeFilter());
 
+		// Output 1, ID, degree for group by
 		DataSet<Tuple3<Long, Long, Long>> topKMapper = highOutDegree
 				.flatMap(new TopKMapper());
 
+		// Get topK
 		DataSet<Tuple3<Long, Long, Long>> topKReducer = topKMapper.groupBy(0)
-				.sortGroup(2, Order.DESCENDING).first(10);
-		// .reduceGroup(new TopKReducer());
+				.sortGroup(2, Order.DESCENDING).first(topK);
 
-		topKReducer.print();
-
+		// Node ID joins with node's name
 		DataSet<Tuple2<String, Long>> topKwithName = topKReducer.join(nodes)
 				.where(1).equalTo(1).flatMap(new ProjectNodeWithName());
 
-		topKwithName.print();
-		// degreeDistribution.writeAsText(Config.pathToOutDegreeDistritbuion(),
-		// FileSystem.WriteMode.OVERWRITE);
+		topKwithName.writeAsText(argPathOut, WriteMode.OVERWRITE);
 
 		env.execute();
 	}
@@ -153,26 +156,6 @@ public class TopKOutDegree {
 		}
 	}
 
-	/*
-	 * public static class FirstNMapper extends RichFlatMapFunction<Tuple2<Long,
-	 * Long>, Tuple3<Long, Long, Long>> {
-	 * 
-	 * private TreeMap<Long, Long> recordMap = new TreeMap<Long, Long>(
-	 * Collections.reverseOrder());
-	 * 
-	 * @Override public void flatMap(Tuple2<Long, Long> tuple,
-	 * Collector<Tuple3<Long, Long, Long>> collector) throws Exception {
-	 * 
-	 * recordMap.put(tuple.f0, tuple.f1); if (recordMap.size() > Config.topK())
-	 * recordMap.remove(recordMap.firstKey()); }
-	 * 
-	 * @Override public void close() throws Exception { Iterator<Entry<Long,
-	 * Long>> iterator = recordMap.entrySet() .iterator(); while
-	 * (iterator.hasNext()) { Entry<Long, Long> thisEntry = iterator.next();
-	 * Long key = thisEntry.getKey(); Long value = thisEntry.getValue();
-	 * collector.collect(new Tuple3<Long, Long, Long>((long) 1, key, value)); }
-	 * } }
-	 */
 	public static class TopKMapper implements
 			FlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
 
@@ -186,31 +169,6 @@ public class TopKOutDegree {
 					tuple.f1));
 		}
 	}
-
-	/*
-	 * public static class TopKReducer implements
-	 * GroupReduceFunction<Tuple3<Long, Long, Long>, Tuple2<Long, Long>> {
-	 * 
-	 * private TreeMap<Long, Long> recordMap = new TreeMap<Long, Long>(
-	 * Collections.reverseOrder());
-	 * 
-	 * @Override public void reduce(Iterable<Tuple3<Long, Long, Long>> tuples,
-	 * Collector<Tuple2<Long, Long>> collector) throws Exception {
-	 * 
-	 * System.out.println("----"); Iterator<Tuple3<Long, Long, Long>> iterator =
-	 * tuples.iterator();
-	 * 
-	 * while (iterator.hasNext()) { Tuple3<Long, Long, Long> thisTuple =
-	 * iterator.next(); recordMap.put(thisTuple.f1, thisTuple.f2); if
-	 * (recordMap.size() > Config.topK())
-	 * recordMap.remove(recordMap.firstKey()); }
-	 * 
-	 * Iterator<Entry<Long, Long>> mapIterator = recordMap.entrySet()
-	 * .iterator(); while (mapIterator.hasNext()) { Entry<Long, Long> thisEntry
-	 * = mapIterator.next(); Long key = thisEntry.getKey(); Long value =
-	 * thisEntry.getValue(); collector.collect(new Tuple2<Long, Long>(key,
-	 * value)); } } }
-	 */
 
 	public static class TopKReducer implements
 			GroupReduceFunction<Tuple3<Long, Long, Long>, Tuple2<Long, Long>> {
@@ -246,7 +204,25 @@ public class TopKOutDegree {
 
 		@Override
 		public boolean filter(Tuple2<Long, Long> value) throws Exception {
-			return value.f1 > Config.avgOutDegree();
+			return value.f1 > degreeFilter;
 		}
+	}
+
+	public static boolean parseParameters(String[] args) {
+
+		if (args.length < 5 || args.length > 5) {
+			System.err
+					.println("Usage: [path to index file] [path to arc file] [output path] [topK] [degreeFilter]");
+			return false;
+		}
+
+		argPathToIndex = args[0];
+		argPathToArc = args[1];
+		argPathOut = args[2];
+
+		topK = Integer.parseInt(args[3]);
+		degreeFilter = Integer.parseInt(args[4]);
+
+		return true;
 	}
 }
