@@ -1,6 +1,6 @@
 Analysis of Graph Structure in the Web Using Apache Flink 
 =================
-(* Work with: philip-raschke)
+(Work with: @philip-raschke)
 ###The dataset is used, the hyperlink graph of 2012
 http://webdatacommons.org/hyperlinkgraph/2012-08/download.html
 
