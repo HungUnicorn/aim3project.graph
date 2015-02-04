@@ -76,7 +76,7 @@ public class PageRank {
                 pageRank,
                 pageRank.join(iterationSet).where(0).equalTo(0).filter(new ConvergenceCondition()));
 
-        results.writeAsText(argPathOut, WriteMode.OVERWRITE);
+        results.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
 
         env.execute();
     }

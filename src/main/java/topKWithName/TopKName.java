@@ -1,11 +1,8 @@
-package degree;
+package topKWithName;
 
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.operators.Order;
@@ -18,25 +15,17 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
-/*TopK: 
- * 1.map:output (1, nodeId, degree)
- * 2.filter degree > avgDegree + 0.5
- * 3.reduce: firstN by Flink
- * 4.join nodeID with name
- * 
- * Gives reasonable results:
- * 1.amazon.com,25
- 2.blogspot.com,23
- 3.youtube.com,16
- */
+/*TopK: a general class to get TopK nodes with names 
+ * Input should be CSV(writeAsCsv) but not txt(writeAsTxt)
+ * */
 
-public class TopKOutDegree {
 
-	private static int topK = 10;
-	private static int degreeFilter = 0;
+public class TopKName{
+
+	private static int topK = 10;	
 
 	private static String argPathToIndex = "";
-	private static String argPathToArc = "";
+	private static String argPathToNodesAndValues = "";
 	private static String argPathOut = "";
 
 	public static void main(String[] args) throws Exception {
@@ -48,7 +37,7 @@ public class TopKOutDegree {
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		DataSource<String> inputArc = env.readTextFile(argPathToArc);
+		DataSource<String> inputNodesAndValue = env.readTextFile(argPathToNodesAndValues);
 
 		DataSource<String> inputIndex = env.readTextFile(argPathToIndex);
 
@@ -56,26 +45,18 @@ public class TopKOutDegree {
 				.flatMap(new NodeReader());
 
 		/* Convert the input to edges, consisting of (source, target) */
-		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
-
-		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(0)
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
-
-		// Focus on the nodes' degree higher than average degree
-		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
-				.filter(new DegreeFilter());
+		DataSet<Tuple2<Long, Double>> nodesAndValue = inputNodesAndValue.flatMap(new ValueReader());		
 
 		// Output 1, ID, degree for group by
-		DataSet<Tuple3<Long, Long, Long>> topKMapper = highOutDegree
+		DataSet<Tuple3<Long, Long, Double>> topKMapper = nodesAndValue
 				.flatMap(new TopKMapper());
 
 		// Get topK
-		DataSet<Tuple3<Long, Long, Long>> topKReducer = topKMapper.groupBy(0)
+		DataSet<Tuple3<Long, Long, Double>> topKReducer = topKMapper.groupBy(0)
 				.sortGroup(2, Order.DESCENDING).first(topK);
 
 		// Node ID joins with node's name
-		DataSet<Tuple2<String, Long>> topKwithName = topKReducer.join(nodes)
+		DataSet<Tuple2<String, Double>> topKwithName = topKReducer.join(nodes)
 				.where(1).equalTo(1).flatMap(new ProjectNodeWithName());
 
 		topKwithName.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
@@ -83,21 +64,21 @@ public class TopKOutDegree {
 		env.execute();
 	}
 
-	public static class ArcReader implements
-			FlatMapFunction<String, Tuple2<Long, Long>> {
+	public static class ValueReader implements
+			FlatMapFunction<String, Tuple2<Long, Double>> {
 
 		private static final Pattern SEPARATOR = Pattern.compile("[ \t,]");
 
 		@Override
-		public void flatMap(String s, Collector<Tuple2<Long, Long>> collector)
+		public void flatMap(String s, Collector<Tuple2<Long, Double>> collector)
 				throws Exception {
 			if (!s.startsWith("%")) {
 				String[] tokens = SEPARATOR.split(s);
 
-				long source = Long.parseLong(tokens[0]);
-				long target = Long.parseLong(tokens[1]);
+				long node = Long.parseLong(tokens[0]);
+				Double value = Double.parseDouble(tokens[1]);
 
-				collector.collect(new Tuple2<Long, Long>(source, target));
+				collector.collect(new Tuple2<Long, Double>(node, value));
 			}
 		}
 	}
@@ -142,57 +123,46 @@ public class TopKOutDegree {
 
 	public static class ProjectNodeWithName
 			implements
-			FlatMapFunction<Tuple2<Tuple3<Long, Long, Long>, Tuple2<String, Long>>, Tuple2<String, Long>> {
+			FlatMapFunction<Tuple2<Tuple3<Long, Long, Double>, Tuple2<String, Long>>, Tuple2<String, Double>> {
 
 		@Override
 		public void flatMap(
-				Tuple2<Tuple3<Long, Long, Long>, Tuple2<String, Long>> value,
-				Collector<Tuple2<String, Long>> collector) throws Exception {
+				Tuple2<Tuple3<Long, Long, Double>, Tuple2<String, Long>> value,
+				Collector<Tuple2<String, Double>> collector) throws Exception {
 
 			collector
-					.collect(new Tuple2<String, Long>(value.f1.f0, value.f0.f2));
+					.collect(new Tuple2<String, Double>(value.f1.f0, value.f0.f2));
 
 		}
 	}
 
 	public static class TopKMapper implements
-			FlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
-
-		private TreeMap<Long, Long> recordMap = new TreeMap<Long, Long>(
-				Collections.reverseOrder());
+			FlatMapFunction<Tuple2<Long, Double>, Tuple3<Long, Long, Double>> {	
 
 		@Override
-		public void flatMap(Tuple2<Long, Long> tuple,
-				Collector<Tuple3<Long, Long, Long>> collector) throws Exception {
-			collector.collect(new Tuple3<Long, Long, Long>((long) 1, tuple.f0,
+		public void flatMap(Tuple2<Long, Double> tuple,
+				Collector<Tuple3<Long, Long, Double>> collector) throws Exception {
+			collector.collect(new Tuple3<Long, Long, Double>((long) 1, tuple.f0,
 					tuple.f1));
-		}
-	}
-
-	public static class DegreeFilter implements
-			FilterFunction<Tuple2<Long, Long>> {
-
-		@Override
-		public boolean filter(Tuple2<Long, Long> value) throws Exception {
-			return value.f1 > degreeFilter;
 		}
 	}
 
 	public static boolean parseParameters(String[] args) {
 
-		if (args.length < 5 || args.length > 5) {
+		if (args.length < 4 || args.length > 4) {
 			System.err
-					.println("Usage: [path to index file] [path to arc file] [output path] [topK] [degreeFilter]");
+					.println("Usage: [path to index file] [path to node and value file] [output path] [topK]");
 			return false;
 		}
 
 		argPathToIndex = args[0];
-		argPathToArc = args[1];
+		argPathToNodesAndValues = args[1];
 		argPathOut = args[2];
 
-		topK = Integer.parseInt(args[3]);
-		degreeFilter = Integer.parseInt(args[4]);
+		topK = Integer.parseInt(args[3]);		
 
 		return true;
 	}
 }
+
+

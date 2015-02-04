@@ -30,7 +30,7 @@ import org.apache.flink.util.Collector;
  3.youtube.com,16
  */
 
-public class TopKOutDegree {
+public class TopKInDegree {
 
 	private static int topK = 10;
 	private static int degreeFilter = 0;
@@ -59,7 +59,7 @@ public class TopKOutDegree {
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(0)
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(1)
 				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
 
 		// Focus on the nodes' degree higher than average degree

@@ -51,34 +51,34 @@ import com.google.common.collect.Iterables;
  */
 
 public class LineRank {
+
+	private static int maxIterations = 0;
+
+	private static String argPathToArc = "";
+	private static String argPathToSourceIncidence = "";
+	private static String argPathToTargetIncidence = "";
+	private static String argPathOut = "";
+	public static double dampingFactor = 0.85;
+	public static double episolon = 0.0001;
+
 	@SuppressWarnings("serial")
 	public static void main(String[] args) throws Exception {
-		/*
-		 * if (args.length < 4) { System.err .println(
-		 * "Usage: LineRank <DOP> <edgeInputPath> <outputPath> <numIterations> <numOfEdges> <delimiter>"
-		 * ); return; }
-		 * 
-		 * final int dop = Integer.parseInt(args[0]);
-		 * 
-		 * final String srcIncidencePath = args[1]; final String targetInputPath
-		 * = args[2]; final String outputPath = args[3]; final int maxIterations
-		 * = Integer.parseInt(args[4]); final double numEdges = (args.length > 5
-		 * ? (Integer.parseInt(args[5])) : 1); Double c = 0.85; String
-		 * fieldDelimiter = CentralityUtil.TAB_DELIM; if (args.length > 6) {
-		 * fieldDelimiter = (args[6]); } char delim =
-		 * CentralityUtil.checkDelim(fieldDelimiter);
-		 */
-		final ExecutionEnvironment env = ExecutionEnvironment
+		if (!parseParameters(args)) {
+			return;
+		}
+		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 		// env.setDegreeOfParallelism(dop);
 
 		// Read inArcs and outArcs
-		DataSource<String> inputInArc = env.readTextFile(Config.inArcs());
+		DataSource<String> inputInArc = env
+				.readTextFile(argPathToSourceIncidence);
 
 		DataSet<Tuple2<Long, Long>> srcIncMat = inputInArc
 				.flatMap(new IncidenceArcReader());
 
-		DataSource<String> inputOutArc = env.readTextFile(Config.outArcs());
+		DataSource<String> inputOutArc = env
+				.readTextFile(argPathToTargetIncidence);
 
 		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc
 				.flatMap(new IncidenceArcReader());
@@ -112,8 +112,7 @@ public class LineRank {
 				}).name("D");
 
 		// Count arcs
-		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
@@ -128,8 +127,6 @@ public class LineRank {
 		 * Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
 		 ********************************************************/
-
-		int maxIterations = Config.maxIterations();
 
 		DoubleSumAggregator agg = new DoubleSumAggregator();
 
@@ -188,7 +185,7 @@ public class LineRank {
 				.join(partialAggregation_2).where(0).equalTo(0)
 				.with(new EdgeScoreAggregation()).name("EdgeScore_Agg");
 
-		lineRank.writeAsCsv(Config.outputPath(), WriteMode.OVERWRITE).name(
+		lineRank.writeAsCsv(argPathOut, WriteMode.OVERWRITE).name(
 				"Writing Results");
 
 		JobExecutionResult job = env.execute();
@@ -211,7 +208,7 @@ public class LineRank {
 		public boolean isConverged(int iteration, DoubleValue value) {
 			double diff = value.getValue();
 			// System.out.println("inside check");
-			return diff < Config.episolon();
+			return diff < episolon;
 		}
 	}
 
@@ -361,11 +358,11 @@ public class LineRank {
 		@Override
 		public Tuple2<Long, Double> join(Tuple2<Long, Double> first,
 				Tuple2<Long, Long> second) throws Exception {
-			double randomJump = (1 - Config.dampingFactor()) / numArc;
+			double randomJump = (1 - dampingFactor) / numArc;
 			Tuple2<Long, Double> result = new Tuple2<Long, Double>();
 
 			result.f0 = second.f0;
-			result.f1 = (first.f1) * Config.dampingFactor() + randomJump;
+			result.f1 = (first.f1) * dampingFactor + randomJump;
 			return result;
 
 		}
@@ -509,5 +506,24 @@ public class LineRank {
 
 			}
 		}
+	}
+
+	public static boolean parseParameters(String[] args) {
+
+		if (args.length < 7 || args.length > 7) {
+			System.err
+					.println("Usage: [path to arc file] [output path] [path to SourceIncidence] [path to sourceOutIncidence] [Max iteration] [epsolon-0.001] [dampingFactor-0.85]");
+			return false;
+		}
+		argPathToArc = args[0];
+		argPathOut = args[1];
+		argPathToSourceIncidence = args[2];
+		argPathToTargetIncidence = args[3];
+		maxIterations = Integer.parseInt(args[4]);
+		episolon = Double.parseDouble(args[5]);
+		dampingFactor = Double.parseDouble(args[6]);
+
+		return true;
+
 	}
 }

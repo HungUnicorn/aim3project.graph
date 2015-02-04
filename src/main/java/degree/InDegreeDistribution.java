@@ -17,7 +17,7 @@ import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
 
-public class OutDegreeDistribution {
+public class InDegreeDistribution {
 
 	private static String argPathToArc = "";
 	private static String argPathOut = "";
@@ -42,7 +42,7 @@ public class OutDegreeDistribution {
 				.reduceGroup(new CountVertices());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges.project(0)
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges.project(1)
 		// difference of out and in
 				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
 
@@ -137,11 +137,10 @@ public class OutDegreeDistribution {
 
 	public static boolean parseParameters(String[] args) {
 
-		if (args.length < 3 || args.length > 3) {
+		if (args.length < 2 || args.length > 2) {
 			System.err.println("Usage: [path to arc file] [output path]");
 			return false;
 		}
-
 		argPathToArc = args[0];
 		argPathOut = args[1];
 

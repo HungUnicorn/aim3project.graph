@@ -40,7 +40,7 @@ import com.google.common.collect.Iterables;
  * To compute a node's closeness, in each step, it sums #neighbors
  * the distance = step i * #neighbors, 1 step represent 1 hop from the start node  
  * 
- * Main benefit is it estimates #neighbors by Flajolet-Martin Sketch
+ * Main benefit is that it estimates #neighbors by Flajolet-Martin Sketch
  * 
  * A concrete execution is as follows:
  * 1. Sum distance for each node iteratively and output <vertexId, bit[], sum>
@@ -53,16 +53,23 @@ import com.google.common.collect.Iterables;
 @SuppressWarnings("serial")
 public class Closeness {
 
+	private static int maxIterations = 10;
+	private static int nodePosition = 0;
+
+	private static String argPathToIndex = "";
+	private static String argPathToArc = "";
+	private static String argPathOut = "";
+
 	public static void main(String[] args) throws Exception {
 
-		/*
-		 * if (!parseParameters(args)) { return; }
-		 */
+		if (!parseParameters(args)) {
+			return;
+		}
+
 		final ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		DataSource<String> inputNode = env.readTextFile(Config
-				.pathToSmallIndex());
+		DataSource<String> inputNode = env.readTextFile(argPathToIndex);
 
 		DataSet<Tuple2<String, Long>> nodes = inputNode
 				.flatMap(new NodeReader());
@@ -74,17 +81,13 @@ public class Closeness {
 		// Initial vertices is both workset and solutionset
 		DataSet<Tuple3<Long, CountDistinctElements, Double>> initialworkingSet = initialSolutionSet;
 
-		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
 		/* Convert the input to edges, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
-		int maxIterations = 10;
-		int keyPosition = 0;
-
 		DeltaIteration<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> deltaIteration = initialSolutionSet
-				.iterateDelta(initialworkingSet, maxIterations, keyPosition);
+				.iterateDelta(initialworkingSet, maxIterations, nodePosition);
 		// Step Function: SendMsg and BitwiseOR
 		// Update Function: FilterCovergeNodes
 
@@ -120,14 +123,8 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-		closeness.writeAsText(Config.outputPath(), WriteMode.OVERWRITE);
-
 		
-		/* DataSet<Tuple3<String, Long, Double>> nodewithName = closeness
-		  .join(nodes).where(0).equalTo(1) .flatMap(new ProjectNodeWithName());
-		  
-		  nodewithName.print();*/
-		 
+		closeness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);		
 
 		env.execute();
 	}
@@ -387,64 +384,21 @@ public class Closeness {
 		}
 	}
 
-	/*
-	 * @Parameters [Degree of parallelism],[vertices input-path],[edge
-	 * input-path], [out-put],[Max-Num of iterations],[Number of vertices]
-	 */
+	public static boolean parseParameters(String[] args) {
 
-	private static boolean fileOutput = false;
-	private static String textPath;
-	private static String outputPath;
-
-	private static boolean parseParameters(String[] args) {
-		String fieldDelimiter = CentralityUtil.TAB_DELIM;
-		int keyPosition = 0;
-
-		if (args.length < 6) {
+		if (args.length < 5 || args.length > 5) {
 			System.err
-					.println("Usage:[Degree of parallelism],[vertices input-path],"
-							+ "[edge input-path],[out-put],[Max-Num of iterations],[Number of vertices]"
-							+ ",[Delimiter]");
-		}
-
-		final int numSubTasks = (args.length > 0 ? Integer.parseInt(args[0])
-				: 1);
-		final String verticesInput = (args.length > 1 ? args[1] : "");
-		final String edgeInput = (args.length > 2 ? args[2] : "");
-		final String output = (args.length > 3 ? args[3] : "");
-		final int maxIterations = (args.length > 4 ? Integer.parseInt(args[4])
-				: 5);
-		final String numVertices = (args.length > 5 ? (args[5])
-				: CentralityUtil.ZERO);
-
-		if (args.length > 6) {
-			fieldDelimiter = (args[6]);
-		}
-
-		char delim = CentralityUtil.checkDelim(fieldDelimiter);
-		if (args.length > 0) {
-			// parse input arguments
-			fileOutput = true;
-			if (args.length == 2) {
-				textPath = args[0];
-				outputPath = args[1];
-			} else {
-				System.err
-						.println("Usage: Closeness <input path> <output path>");
-				return false;
-			}
-		} else {
-			System.out
-					.println(" Provide parameters to read input data from a file.");
-			System.out.println("Usage: Closeness <input path> <output path>");
+					.println("Usage:[path to index file] [path to arc file] [output path] [Max iterations] [Node position]");
 			return false;
 		}
+
+		argPathToIndex = args[0];
+		argPathToArc = args[1];
+		argPathOut = args[2];
+
+		maxIterations = Integer.parseInt(args[3]);
+		nodePosition = Integer.parseInt(args[4]);
+
 		return true;
 	}
-
-	private static DataSource<String> getTextDataSource(ExecutionEnvironment env) {
-		// read the text file from given input path
-		return env.readTextFile(textPath);
-	}
-
 }
