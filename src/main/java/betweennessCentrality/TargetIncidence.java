@@ -17,47 +17,40 @@ import betweennessCentrality.SourceIncidence.ArcReader;
  * Generate out-arcs for sparse Line Graph
  * 
  * 1->2, 1->3 will generate
-edge1, 2
-edge2, 3 
+ edge1, 2
+ edge2, 3 
  */
 
 public class TargetIncidence {
+	private static String argPathToArc = "";
+	private static String argPathOut = "";
 
 	public static void main(String[] args) throws Exception {
-		
-		/* * if (args.length < 4) { System.err .println(
-		 * "Usage: LineRank <DOP> <edgeInputPath> <tar outputPath> <delimiter>"
-		 * ); return; }
-		 
 
-		final int dop = Integer.parseInt(args[0]);
-		final String edgeInputPath = args[1];
-		final String outputPath = args[2];
-		String fieldDelimiter = CentralityUtil.TAB_DELIM;
-		if (args.length > 3) {
-			fieldDelimiter = (args[3]);
+		if (!parseParameters(args)) {
+			return;
 		}
 
-		char delim = CentralityUtil.checkDelim(fieldDelimiter);
-*/
-		final ExecutionEnvironment env = ExecutionEnvironment
+		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
-		//env.setDegreeOfParallelism(dop);
-		
+		// env.setDegreeOfParallelism(dop);
+
 		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+				.readTextFile(argPathToArc);
 
 		/* Convert the input to edges, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
-		
-		DataSet<Tuple3<Long, Long, Double>> tarIncMat = arcs.map(new TargetIncMatrix())
-				.name("T(G)");
 
-		tarIncMat.writeAsCsv(Config.outArcs(), "\n", "\t",
+		DataSet<Tuple3<Long, Long, Double>> tarIncMat = arcs.map(
+				new TargetIncMatrix()).name("T(G)");
+
+		tarIncMat.writeAsCsv(argPathOut, "\n", "\t",
 				FileSystem.WriteMode.OVERWRITE);
 		JobExecutionResult job = env.execute();
-		/*System.out.println("RunTime-->" + ((job.getNetRuntime() / 1000))
-				+ "sec");*/
+		/*
+		 * System.out.println("RunTime-->" + ((job.getNetRuntime() / 1000)) +
+		 * "sec");
+		 */
 	}
 
 	/**
@@ -87,6 +80,18 @@ public class TargetIncidence {
 			// System.out.println("Tar-->"+tarInc.f0+" "+tarInc.f1+" "+tarInc.f2);
 			return tarInc;
 		}
+	}
+
+	public static boolean parseParameters(String[] args) {
+
+		if (args.length < 2 || args.length > 2) {
+			System.err.println("Usage: [path to arc file] [output path]");
+			return false;
+		}
+		argPathToArc = args[0];
+		argPathOut = args[1];
+		return true;
+
 	}
 
 }

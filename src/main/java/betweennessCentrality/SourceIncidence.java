@@ -18,39 +18,34 @@ import org.apache.flink.util.Collector;
 /* Line Graph Decomposition
  * Generate the in-arcs file for sparse Line Graph 
  1->2, 1->3 will generate
-edge1, 1
-edge2, 2 
-*/
+ edge1, 1
+ edge2, 2 
+ */
 
 public class SourceIncidence {
-	public static void main(String[] args) throws Exception {
-		/*
-		 * if (args.length < 4) { System.err .println(
-		 * "Usage: LineRank <DOP> <edgeInputPath> <src outputPath> <delimiter>"
-		 * ); return; }
-		 * 
-		 * final int dop = Integer.parseInt(args[0]); final String edgeInputPath
-		 * = args[1]; final String outputPath = args[2]; String fieldDelimiter =
-		 * CentralityUtil.TAB_DELIM; if(args.length>3){ fieldDelimiter =
-		 * (args[3]); }
-		 * 
-		 * char delim = CentralityUtil.checkDelim(fieldDelimiter);
-		 */
 
-		final ExecutionEnvironment env = ExecutionEnvironment
+	private static String argPathToArc = "";
+	private static String argPathOut = "";
+
+	public static void main(String[] args) throws Exception {
+		if (!parseParameters(args)) {
+			return;
+		}
+
+		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 		// env.setDegreeOfParallelism(dop);
 
 		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+				.readTextFile(argPathToArc);
 
 		/* Convert the input to edges, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
-		DataSet<Tuple3<Long, Long, Double>> srcIncMat = arcs
-				.map(new SourceIncMatrix()).name("S(G)");
+		DataSet<Tuple3<Long, Long, Double>> srcIncMat = arcs.map(
+				new SourceIncMatrix()).name("S(G)");
 
-		srcIncMat.writeAsCsv(Config.inArcs(), "\n", "\t",
+		srcIncMat.writeAsCsv(argPathOut, "\n", "\t",
 				FileSystem.WriteMode.OVERWRITE);
 
 		env.execute();
@@ -103,5 +98,17 @@ public class SourceIncidence {
 				collector.collect(new Tuple2<Long, Long>(source, target));
 			}
 		}
+	}
+
+	public static boolean parseParameters(String[] args) {
+
+		if (args.length < 2 || args.length > 2) {
+			System.err.println("Usage: [path to arc file] [output path]");
+			return false;
+		}
+		argPathToArc = args[0];
+		argPathOut = args[1];
+		return true;
+
 	}
 }
