@@ -122,7 +122,7 @@ public class LineRank {
 		DataSet<Tuple2<Long, Double>> edgeScores = d
 				.map(new InitializeRandomVector()).name("V")
 				.withBroadcastSet(numArc, "numArc");
-		d.print();
+		//d.print();
 		/********************************************************
 		 * Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
@@ -161,7 +161,7 @@ public class LineRank {
 				.with(new V3_TarIncWithV2())
 				.withBroadcastSet(numArc, "numArc")
 				.name("V3")
-				// .map(new DampingMapper(c, numEdges)) // mxv X vx1 => mx1
+				 //.map(new DampingMapper(dampingFactor, numArc)) // mxv X vx1 => mx1
 				// .map(new PrintMapper("v3"))
 				.join(iteration).where(0).equalTo(0).with(new L1_NormDiff())
 				.name("L1_NORM");
@@ -204,11 +204,14 @@ public class LineRank {
 	 */
 	public static final class L1_NormConvergence implements
 			ConvergenceCriterion<DoubleValue> {
+		
+		private static final double EPSILON = 0.001;
+		
 		@Override
 		public boolean isConverged(int iteration, DoubleValue value) {
 			double diff = value.getValue();
 			// System.out.println("inside check");
-			return diff < episolon;
+			return diff < EPSILON;
 		}
 	}
 
@@ -358,6 +361,7 @@ public class LineRank {
 		@Override
 		public Tuple2<Long, Double> join(Tuple2<Long, Double> first,
 				Tuple2<Long, Long> second) throws Exception {
+			dampingFactor = 0.85;
 			double randomJump = (1 - dampingFactor) / numArc;
 			Tuple2<Long, Double> result = new Tuple2<Long, Double>();
 
@@ -416,6 +420,7 @@ public class LineRank {
 		@Override
 		public void reduce(Iterable<Tuple2<Long, Long>> values,
 				Collector<Tuple2<Long, Double>> out) throws Exception {
+			
 			Tuple2<Long, Double> toVector = new Tuple2<Long, Double>();
 			Double sum = 0.0;
 			boolean flag = false;
@@ -512,7 +517,7 @@ public class LineRank {
 
 		if (args.length < 7 || args.length > 7) {
 			System.err
-					.println("Usage: [path to arc file] [output path] [path to SourceIncidence] [path to sourceOutIncidence] [Max iteration] [epsolon-0.001] [dampingFactor-0.85]");
+					.println("Usage: [path to arc file] [output path] [path to SourceIncidence] [path to TargetIncidence] [Max iteration] [epsolon-0.001] [dampingFactor-0.85]");
 			return false;
 		}
 		argPathToArc = args[0];

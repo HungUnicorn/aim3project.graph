@@ -60,9 +60,9 @@ public class TopKOutDegree {
 
 		/* Compute the degree of every vertex */
 		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(0)
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
-
-		// Focus on the nodes' degree higher than average degree
+				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());		
+		
+		//Focus on the nodes' degree higher than average degree
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
 				.filter(new DegreeFilter());
 

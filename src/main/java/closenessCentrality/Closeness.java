@@ -19,6 +19,7 @@ import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSeco
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.api.java.operators.GroupReduceOperator;
+import org.apache.flink.api.java.operators.UnionOperator;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -83,9 +84,13 @@ public class Closeness {
 
 		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
-		/* Convert the input to edges, consisting of (source, target) */
-		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
+		/* Convert the input to edges, consisting of (source, target),  */
+		DataSet<Tuple2<Long, Long>> oneArcs = inputArc.flatMap(new ArcReader());
 
+		DataSet<Tuple2<Long, Long>> invertedArcs =  oneArcs.flatMap(new UndirectEdge());
+		
+		DataSet<Tuple2<Long, Long>> arcs = oneArcs.union(invertedArcs);
+		
 		DeltaIteration<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> deltaIteration = initialSolutionSet
 				.iterateDelta(initialworkingSet, maxIterations, nodePosition);
 		// Step Function: SendMsg and BitwiseOR
@@ -123,8 +128,8 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-		
-		closeness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);		
+
+		closeness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
 
 		env.execute();
 	}
@@ -149,7 +154,9 @@ public class Closeness {
 				Tuple3<Long, CountDistinctElements, Double> value)
 				throws Exception {
 			if (value.f2 > 0) {
-				closeness = value.f2 / (numVertices - 1);
+				// difference than the paper : closeness = value.f2 /
+				// (numVertices - 1), lower->more central
+				closeness = value.f2/(numVertices - 1) ;// higher->more central
 			}
 			Tuple2<Long, Double> emitcloseness = new Tuple2<Long, Double>();
 			emitcloseness.f0 = value.f0;
@@ -281,9 +288,11 @@ public class Closeness {
 		@Override
 		public void open(Configuration parameters) throws Exception {
 			if (getIterationRuntimeContext().getSuperstepNumber() != 1L) {
-				System.out.println("Current Workset size--->"
-						+ worksetSize.size() + " at iteration "
-						+ getIterationRuntimeContext().getSuperstepNumber());
+				/*
+				 * System.out.println("Current Workset size--->" +
+				 * worksetSize.size() + " at iteration " +
+				 * getIterationRuntimeContext().getSuperstepNumber());
+				 */
 				worksetSize.clear();
 			}
 		}
@@ -310,12 +319,12 @@ public class Closeness {
 				sum = sum + iterationNumber * (diff);
 				current.f2 = (Double) sum;
 				worksetSize.add((java.lang.Long) current.f0);
-				System.out.println("not converged " + current.f0 + "  at  "
-						+ iterationNumber);
+				/*System.out.println("not converged " + current.f0 + "  at  "
+						+ iterationNumber);*/
 				return current;
 			} else {
-				System.out.println("converged " + current.f0 + "  at  "
-						+ iterationNumber);
+			/*	System.out.println("converged " + current.f0 + "  at  "
+						+ iterationNumber);*/
 			}
 			return previous;
 		}
@@ -384,6 +393,24 @@ public class Closeness {
 		}
 	}
 
+	/**
+	 * Undirected edges by emitting for each input edge the input edges itself
+	 * and an inverted version.
+	 */
+	public static final class UndirectEdge implements
+			FlatMapFunction<Tuple2<Long, Long>, Tuple2<Long, Long>> {
+		Tuple2<Long, Long> invertedEdge = new Tuple2<Long, Long>();
+
+		@Override
+		public void flatMap(Tuple2<Long, Long> edge,
+				Collector<Tuple2<Long, Long>> out) {
+			invertedEdge.f0 = edge.f1;
+			invertedEdge.f1 = edge.f0;
+			out.collect(edge);
+			out.collect(invertedEdge);
+		}
+	}
+	
 	public static boolean parseParameters(String[] args) {
 
 		if (args.length < 5 || args.length > 5) {

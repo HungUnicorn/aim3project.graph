@@ -1,27 +1,27 @@
 package connectivity;
 
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.ProgramDescription;
 import org.apache.flink.api.common.functions.FlatJoinFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.java.DataSet;
+import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFields;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsFirst;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSecond;
+import org.apache.flink.api.java.operators.DataSource;
+import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.util.Collector;
-import org.apache.flink.api.java.DataSet;
-import org.apache.flink.api.java.operators.DataSource;
-import org.apache.flink.api.java.operators.DeltaIteration;
-import org.apache.flink.api.java.ExecutionEnvironment;
 
-import degree.Config;
-import degree.TopKOutDegree.ArcReader;
-import degree.TopKOutDegree.NodeReader;
+import com.google.common.collect.Iterables;
 
 /**
  * An implementation of the connected components algorithm, using a delta
@@ -41,33 +41,7 @@ import degree.TopKOutDegree.NodeReader;
  * vertices. Because we see all vertices initially as changed, the initial
  * workset and the initial solution set are identical. Also, the delta to the
  * solution set is consequently also the next workset.<br>
- * 
- * <p>
- * Input files are plain text files and must be formatted as follows:
- * <ul>
- * <li>Vertices represented as IDs and separated by new-line characters.<br>
- * For example <code>"1\n2\n12\n42\n63\n"</code> gives five vertices (1), (2),
- * (12), (42), and (63).
- * <li>Edges are represented as pairs for vertex IDs which are separated by
- * space characters. Edges are separated by new-line characters.<br>
- * For example <code>"1 2\n2 12\n1 12\n42 63\n"</code> gives four (undirected)
- * edges (1)-(2), (2)-(12), (1)-(12), and (42)-(63).
- * </ul>
- * 
- * <p>
- * Usage:
- * <code>ConnectedComponents &lt;vertices path&gt; &lt;edges path&gt; &lt;result path&gt; &lt;max number of iterations&gt;</code>
- * <br>
- * If no parameters are provided, the program is run with default data from
- * {@link ConnectedComponentsData} and 10 iterations.
- * 
- * <p>
- * This example shows how to use:
- * <ul>
- * <li>Delta Iterations
- * <li>Generic-typed Functions
- * </ul>
- */
+ * */
 @SuppressWarnings("serial")
 public class WeakConnectedComponents implements ProgramDescription {
 
@@ -77,16 +51,15 @@ public class WeakConnectedComponents implements ProgramDescription {
 
 	public static void main(String... args) throws Exception {
 
-		if (!parseParameters(args)) {
-			return;
-		}
+		/*
+		 * if (!parseParameters(args)) { return; }
+		 */
 
 		// set up execution environment
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		DataSource<String> inputArc = env
-				.readTextFile(Config.pathToSmallArcs());
+		DataSource<String> inputArc = env.readTextFile(Config.pathToSmallArcs());
 
 		DataSource<String> inputIndex = env.readTextFile(Config
 				.pathToSmallIndex());
@@ -95,6 +68,9 @@ public class WeakConnectedComponents implements ProgramDescription {
 
 		/* Convert the input to edges, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> edges = inputArc.flatMap(new ArcReader());
+		
+		// Undirected graph (arc becomes edge)
+		//DataSet<Tuple2<Long, Long>> edges = arcs.flatMap(new UndirectEdge());
 
 		// assign the initial components (equal to the vertex id)
 		DataSet<Tuple2<Long, Long>> verticesWithInitialId = vertices
@@ -114,15 +90,29 @@ public class WeakConnectedComponents implements ProgramDescription {
 				.with(new ComponentIdFilter());
 
 		// close the delta iteration (delta and new workset are identical)
-		DataSet<Tuple2<Long, Long>> result = iteration.closeWith(changes,
-				changes);
+		DataSet<Tuple2<Long, Long>> vertexWithComponentID = iteration
+				.closeWith(changes, changes);
 
-		//result.groupBy(1).aggregate(Aggregations., field)
+		vertexWithComponentID.writeAsCsv(Config.pathToWeakConnectedComponents());
+		
+		// Size of Component
+		DataSet<Long> numComponent = vertexWithComponentID.project(1)
+				.types(Long.class).distinct().reduceGroup(new CountComponent());
+
+		/* Compute the size of every component, emit (Component size, 1) */
+		DataSet<Tuple2<Long, Long>> ComponentCount = vertexWithComponentID
+				.project(1).types(Long.class).groupBy(0)
+				.reduceGroup(new ComponentCount()).flatMap(new ComponentMap());
+
+		DataSet<Tuple2<Long, Long>> ComponentDistribution = ComponentCount
+				.groupBy(0).aggregate(Aggregations.SUM, 1);
+
 		// emit result
 		if (fileOutput) {
-			result.writeAsCsv(outputPath, "\n", " ");
+			ComponentDistribution.writeAsCsv(outputPath, "\n", " ");
 		} else {
-			result.print();
+			numComponent.print();
+			ComponentDistribution.print();
 		}
 
 		// execute program
@@ -132,6 +122,44 @@ public class WeakConnectedComponents implements ProgramDescription {
 	// *************************************************************************
 	// USER FUNCTIONS
 	// *************************************************************************
+
+	public static class CountComponent implements
+			GroupReduceFunction<Tuple1<Long>, Long> {
+		@Override
+		public void reduce(Iterable<Tuple1<Long>> vertices,
+				Collector<Long> collector) throws Exception {
+			collector.collect(new Long(Iterables.size(vertices)));
+		}
+	}
+
+	public static class ComponentMap implements
+			FlatMapFunction<Tuple2<Long, Long>, Tuple2<Long, Long>> {
+
+		@Override
+		public void flatMap(Tuple2<Long, Long> value,
+				Collector<Tuple2<Long, Long>> out) throws Exception {
+			out.collect(new Tuple2<Long, Long>(value.f1, new Long(1)));
+		}
+	}
+
+	public static class ComponentCount implements
+			GroupReduceFunction<Tuple1<Long>, Tuple2<Long, Long>> {
+		@Override
+		public void reduce(Iterable<Tuple1<Long>> tuples,
+				Collector<Tuple2<Long, Long>> collector) throws Exception {
+
+			Iterator<Tuple1<Long>> iterator = tuples.iterator();
+			Long vertexId = iterator.next().f0;
+
+			long count = 1L;
+			while (iterator.hasNext()) {
+				iterator.next();
+				count++;
+			}
+
+			collector.collect(new Tuple2<Long, Long>(vertexId, count));
+		}
+	}
 
 	public static class ArcReader implements
 			FlatMapFunction<String, Tuple2<Long, Long>> {

@@ -45,4 +45,9 @@ public class Config {
 	public static long avgOutDegree() {
 		return (long) 20;
 	}
+	
+	public static String vertexDegree() {
+		return OUTPUT_PATH + "VertexDegree";
+	}
+	
 }

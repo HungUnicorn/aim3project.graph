@@ -11,6 +11,10 @@ public class Config {
 	public static String pathToSmallArcs() {
 		return INPUT_PATH + "smallGraph/example_arcs";
 	}
+	
+	public static String pathToTestArcs() {
+		return INPUT_PATH + "smallGraph/arcs";
+	}
 
 	// Example nodes
 	public static String pathToSmallIndex() {

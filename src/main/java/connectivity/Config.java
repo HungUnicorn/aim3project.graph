@@ -15,14 +15,14 @@ public class Config {
 	  public static String pathToSmallIndex() {
 			return INPUT_PATH + "smallGraph/example_index";
 		}
-	  
-		public static String pathToBigGraph() {
-			return INPUT_PATH + "big.tab";
-		}			  
 
-	  public static String outputPath() {
-	    return OUTPUT_PATH+ "/tmp/statistics/";
-	  }
+	  public static String pathToTestArcs() {
+			return INPUT_PATH + "smallGraph/arcs";
+		}
+	  
+	  public static String pathToTestNodes() {
+			return INPUT_PATH + "smallGraph/index";
+		}	 
 
 	  public static String pathToWeakConnectedComponents() {
 			return OUTPUT_PATH + "WeakConnectedComponents";

@@ -18,17 +18,19 @@ public class CSVConverter{
 	static File outputFile; // output file to be returned
 	static BufferedReader br; // used to read in bytes from file
 	static FileWriter writer; // used to write bytes to file
-
+	static String fileName = "example_arcs";
+	
 	public static void main(String args[]){
-		String inputFilePath = "/home/hung/aim3project.graph/src/test/resources/smallGraph/example_arcs";
+		String inputFilePath = "/home/hung/"+ fileName;
 		File inputFile = new File(inputFilePath);
 		CSVConverter c = new CSVConverter();		
 		c.convertFromTabToCSV(inputFile);
+		System.out.print("Converted end");
 		
 	}
 	
 	private static File convert(File inputFile, char from, char to) {
-		outputFile = new File("convertedCsv.csv");
+		outputFile = new File("/home/hung/" + fileName +".csv");
 
 		try {
 			stack = new Stack<String>();
