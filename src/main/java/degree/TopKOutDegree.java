@@ -157,10 +157,7 @@ public class TopKOutDegree {
 
 	public static class TopKMapper implements
 			FlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
-
-		private TreeMap<Long, Long> recordMap = new TreeMap<Long, Long>(
-				Collections.reverseOrder());
-
+	
 		@Override
 		public void flatMap(Tuple2<Long, Long> tuple,
 				Collector<Tuple3<Long, Long, Long>> collector) throws Exception {

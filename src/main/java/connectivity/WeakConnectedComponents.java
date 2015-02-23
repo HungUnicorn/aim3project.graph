@@ -19,6 +19,7 @@ import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
@@ -45,32 +46,29 @@ import com.google.common.collect.Iterables;
 @SuppressWarnings("serial")
 public class WeakConnectedComponents implements ProgramDescription {
 
-	// *************************************************************************
-	// PROGRAM
-	// *************************************************************************
-
 	public static void main(String... args) throws Exception {
 
-		/*
-		 * if (!parseParameters(args)) { return; }
-		 */
+		if (!parseParameters(args)) {
+			return;
+		}
 
 		// set up execution environment
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
 
-		DataSource<String> inputArc = env.readTextFile(Config.pathToSmallArcs());
+		DataSource<String> inputArc = env
+				.readTextFile(edgesPath);
 
-		DataSource<String> inputIndex = env.readTextFile(Config
-				.pathToSmallIndex());
+		DataSource<String> inputIndex = env.readTextFile(verticesPath);
 
 		DataSet<Long> vertices = inputIndex.flatMap(new NodeReader());
 
 		/* Convert the input to edges, consisting of (source, target) */
-		DataSet<Tuple2<Long, Long>> edges = inputArc.flatMap(new ArcReader());
-		
+		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
+
 		// Undirected graph (arc becomes edge)
-		//DataSet<Tuple2<Long, Long>> edges = arcs.flatMap(new UndirectEdge());
+		DataSet<Tuple2<Long, Long>> edges = arcs.flatMap(new UndirectEdge())
+				.distinct();
 
 		// assign the initial components (equal to the vertex id)
 		DataSet<Tuple2<Long, Long>> verticesWithInitialId = vertices
@@ -92,8 +90,6 @@ public class WeakConnectedComponents implements ProgramDescription {
 		// close the delta iteration (delta and new workset are identical)
 		DataSet<Tuple2<Long, Long>> vertexWithComponentID = iteration
 				.closeWith(changes, changes);
-
-		vertexWithComponentID.writeAsCsv(Config.pathToWeakConnectedComponents());
 		
 		// Size of Component
 		DataSet<Long> numComponent = vertexWithComponentID.project(1)
@@ -109,14 +105,16 @@ public class WeakConnectedComponents implements ProgramDescription {
 
 		// emit result
 		if (fileOutput) {
-			ComponentDistribution.writeAsCsv(outputPath, "\n", " ");
+			ComponentDistribution.writeAsCsv(outputPath, "\n", " ",
+					FileSystem.WriteMode.OVERWRITE);
+			numComponent.print();
 		} else {
 			numComponent.print();
 			ComponentDistribution.print();
 		}
 
 		// execute program
-		env.execute("Connected Components Example");
+		env.execute("Weakly Connected Components");
 	}
 
 	// *************************************************************************

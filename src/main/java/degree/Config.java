@@ -26,10 +26,7 @@ public class Config {
 		return "/home/hung/Downloads/index-00000";
 	}
 
-	public static String pathToWebCommon() {
-		return "/home/Downloads/";
-	}
-
+	
 	public static String outputPath() {
 		return OUTPUT_PATH + "/tmp/statistics/";
 	}
@@ -45,9 +42,5 @@ public class Config {
 	public static long avgOutDegree() {
 		return (long) 20;
 	}
-	
-	public static String vertexDegree() {
-		return OUTPUT_PATH + "VertexDegree";
-	}
-	
+		
 }

@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.accumulators.IntCounter;
+import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.common.functions.RichJoinFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFields;
@@ -18,6 +20,7 @@ import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsFirs
 import org.apache.flink.api.java.functions.FunctionAnnotation.ConstantFieldsSecond;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.DeltaIteration;
+import org.apache.flink.api.java.operators.FilterOperator;
 import org.apache.flink.api.java.operators.GroupReduceOperator;
 import org.apache.flink.api.java.operators.UnionOperator;
 import org.apache.flink.api.java.tuple.Tuple1;
@@ -60,6 +63,7 @@ public class Closeness {
 	private static String argPathToIndex = "";
 	private static String argPathToArc = "";
 	private static String argPathOut = "";
+	private static int topK = 10;
 
 	public static void main(String[] args) throws Exception {
 
@@ -84,21 +88,23 @@ public class Closeness {
 
 		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
-		/* Convert the input to edges, consisting of (source, target),  */
-		DataSet<Tuple2<Long, Long>> oneArcs = inputArc.flatMap(new ArcReader());
+		/*
+		 * Convert the input to edges, consisting of (source, target),
+		 * (target,source)
+		 */
+		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
-		DataSet<Tuple2<Long, Long>> invertedArcs =  oneArcs.flatMap(new UndirectEdge());
-		
-		DataSet<Tuple2<Long, Long>> arcs = oneArcs.union(invertedArcs);
-		
+		DataSet<Tuple2<Long, Long>> edges = arcs.flatMap(new UndirectEdge())
+				.distinct();
+
+		// Step Function: SendMsg and BitwiseOR, Update Function:
+		// FilterCovergeNodes
 		DeltaIteration<Tuple3<Long, CountDistinctElements, Double>, Tuple3<Long, CountDistinctElements, Double>> deltaIteration = initialSolutionSet
 				.iterateDelta(initialworkingSet, maxIterations, nodePosition);
-		// Step Function: SendMsg and BitwiseOR
-		// Update Function: FilterCovergeNodes
 
 		// Send message to neighbors and record in bit_string
 		DataSet<Tuple3<Long, CountDistinctElements, Double>> neighbors = deltaIteration
-				.getWorkset().join(arcs).where(0).equalTo(1)
+				.getWorkset().join(edges).where(0).equalTo(1)
 				.with(new SendingMessageToNeighbors())
 				.name("Sending Message To Neighbors");
 
@@ -118,8 +124,8 @@ public class Closeness {
 				.closeWith(candidateUpdates, candidateUpdates);
 
 		// Create a dataset of all node ids and count them
-		DataSet<Long> numVertices = arcs.project(0).types(Long.class)
-				.union(arcs.project(1).types(Long.class)).distinct()
+		DataSet<Long> numVertices = edges.project(0).types(Long.class)
+				.union(edges.project(1).types(Long.class)).distinct()
 				.reduceGroup(new CountVertices());
 
 		// Computation of average with a single map which reads the
@@ -129,9 +135,42 @@ public class Closeness {
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
 
-		closeness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
+		closeness.print();
+		
+		DataSet<Tuple2<Long, Double>> filterCloseness = closeness
+				.filter(new TopKFilter());
+
+		DataSet<Tuple3<Long, Long, Double>> mapCloseness = filterCloseness
+				.flatMap(new TopKMapper());
+
+		DataSet<Tuple2<Long, Double>> topCloseness = mapCloseness.groupBy(0)
+				.sortGroup(2, Order.DESCENDING).first(topK).project(1, 2)
+				.types(Long.class, Double.class);
+		
+		topCloseness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
 
 		env.execute();
+	}
+
+	public static class TopKMapper implements
+			FlatMapFunction<Tuple2<Long, Double>, Tuple3<Long, Long, Double>> {
+
+		@Override
+		public void flatMap(Tuple2<Long, Double> tuple,
+				Collector<Tuple3<Long, Long, Double>> collector)
+				throws Exception {
+			collector.collect(new Tuple3<Long, Long, Double>((long) 1,
+					tuple.f0, tuple.f1));
+		}
+	}
+
+	public static class TopKFilter implements
+			FilterFunction<Tuple2<Long, Double>> {
+
+		@Override
+		public boolean filter(Tuple2<Long, Double> value) throws Exception {
+			return value.f1 > 0.3;
+		}
 	}
 
 	@ConstantFields("0")
@@ -155,8 +194,8 @@ public class Closeness {
 				throws Exception {
 			if (value.f2 > 0) {
 				// difference than the paper : closeness = value.f2 /
-				// (numVertices - 1), lower->more central
-				closeness = value.f2/(numVertices - 1) ;// higher->more central
+				// (numVertices - 1), lower value -> more central
+				closeness = (numVertices - 1) / value.f2;// higher->more central
 			}
 			Tuple2<Long, Double> emitcloseness = new Tuple2<Long, Double>();
 			emitcloseness.f0 = value.f0;
@@ -319,12 +358,16 @@ public class Closeness {
 				sum = sum + iterationNumber * (diff);
 				current.f2 = (Double) sum;
 				worksetSize.add((java.lang.Long) current.f0);
-				/*System.out.println("not converged " + current.f0 + "  at  "
-						+ iterationNumber);*/
+				/*
+				 * System.out.println("not converged " + current.f0 + "  at  " +
+				 * iterationNumber);
+				 */
 				return current;
 			} else {
-			/*	System.out.println("converged " + current.f0 + "  at  "
-						+ iterationNumber);*/
+				/*
+				 * System.out.println("converged " + current.f0 + "  at  " +
+				 * iterationNumber);
+				 */
 			}
 			return previous;
 		}
@@ -410,12 +453,12 @@ public class Closeness {
 			out.collect(invertedEdge);
 		}
 	}
-	
+
 	public static boolean parseParameters(String[] args) {
 
-		if (args.length < 5 || args.length > 5) {
+		if (args.length < 6 || args.length > 6) {
 			System.err
-					.println("Usage:[path to index file] [path to arc file] [output path] [Max iterations] [Node position]");
+					.println("Usage:[path to index file] [path to arc file] [output path] [Max iterations] [Node position] [topK]");
 			return false;
 		}
 
@@ -425,7 +468,7 @@ public class Closeness {
 
 		maxIterations = Integer.parseInt(args[3]);
 		nodePosition = Integer.parseInt(args[4]);
-
+		topK = Integer.parseInt(args[5]);
 		return true;
 	}
 }
