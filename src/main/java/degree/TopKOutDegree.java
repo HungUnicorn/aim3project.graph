@@ -1,8 +1,6 @@
 package degree;
 
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.functions.FilterFunction;
@@ -18,16 +16,11 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
-/*TopK: 
+/* Get Top K out-degree: 
  * 1.map:output (1, nodeId, degree)
- * 2.filter degree > avgDegree + 0.5
+ * 2.filter degree, ex. degree > avgDegree
  * 3.reduce: firstN by Flink
  * 4.join nodeID with name
- * 
- * Gives reasonable results:
- * 1.amazon.com,25
- 2.blogspot.com,23
- 3.youtube.com,16
  */
 
 public class TopKOutDegree {

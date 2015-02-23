@@ -33,24 +33,25 @@ import org.apache.flink.util.Collector;
 import com.google.common.collect.Iterables;
 
 /*
- * Efficient closeness computation from Centralities in Large Networks:
- * Algorithms and Observations. 
+ * Efficient closeness computation from "Centralities in Large Networks:
+ * Algorithms and Observations". 
  * 
  * Closeness is based on the length of the average
  * shortest path between a node and all other nodes in the network
  * Assumption:view graph as undirected (Hierarchical closeness(2014) solves this limitation)
  * 
- * 
  * To compute a node's closeness, in each step, it sums #neighbors
  * the distance = step i * #neighbors, 1 step represent 1 hop from the start node  
  * 
- * Main benefit is that it estimates #neighbors by Flajolet-Martin Sketch
+ * Main benefit is that it estimates #neighbors by Flajolet-Martin Sketch and replaces distance by step i * # neighbors 
  * 
  * A concrete execution is as follows:
  * 1. Sum distance for each node iteratively and output <vertexId, bit[], sum>
  * bit[] records the neighbors of node 
  * 
  * 2. Avg((n-1)/sum) for each node and (larger sum(distance) means this node needs more hop to other nodes)
+ * (in paper it's sum/n-1 which the lower the value of node is, the more central of node is)
+ * 
  * output <nodeID, closeness>
  */
 
@@ -78,7 +79,7 @@ public class Closeness {
 
 		DataSet<Tuple2<String, Long>> nodes = inputNode
 				.flatMap(new NodeReader());
-
+		
 		DataSet<Tuple3<Long, CountDistinctElements, Double>> initialSolutionSet = nodes
 				.flatMap(new AssignBitArrayToVertices()).name(
 						"Assign BitArray to Vertex");
@@ -134,9 +135,8 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-
-		closeness.print();
 		
+		// Focus on top K closeness 
 		DataSet<Tuple2<Long, Double>> filterCloseness = closeness
 				.filter(new TopKFilter());
 
@@ -169,6 +169,7 @@ public class Closeness {
 
 		@Override
 		public boolean filter(Tuple2<Long, Double> value) throws Exception {
+			// a learning param to improve efficiency
 			return value.f1 > 0.3;
 		}
 	}
@@ -436,7 +437,7 @@ public class Closeness {
 		}
 	}
 
-	/**
+	/*
 	 * Undirected edges by emitting for each input edge the input edges itself
 	 * and an inverted version.
 	 */

@@ -17,30 +17,13 @@ public class Config {
 	public static String pathToSmallIndex() {
 		return INPUT_PATH + "smallGraph/example_index";
 	}
-
-	public static String pathToBigArcs() {
-		return "/home/hung/Downloads/sd-arc";
-	}
-
-	public static String pathToBigIndex() {
-		return "/home/hung/Downloads/index-00000";
-	}
-
-	
-	public static String outputPath() {
-		return OUTPUT_PATH + "/tmp/statistics/";
-	}
-
+			
 	public static String pathToOutDegreeDistritbuion() {
 		return OUTPUT_PATH + "outDegreeDistribution";
 	}
 
 	public static long topK() {
 		return 5;
-	}
-
-	public static long avgOutDegree() {
-		return (long) 20;
-	}
+	}	
 		
 }

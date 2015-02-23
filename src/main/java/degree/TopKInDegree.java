@@ -1,8 +1,6 @@
 package degree;
 
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.functions.FilterFunction;
@@ -18,16 +16,11 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
 import org.apache.flink.util.Collector;
 
-/*TopK: 
+/* Get top K in-degree
  * 1.map:output (1, nodeId, degree)
- * 2.filter degree > avgDegree + 0.5
+ * 2.filter degree, ex. degree> avg(degree) 
  * 3.reduce: firstN by Flink
  * 4.join nodeID with name
- * 
- * Gives reasonable results:
- * 1.amazon.com,25
- 2.blogspot.com,23
- 3.youtube.com,16
  */
 
 public class TopKInDegree {
@@ -62,11 +55,11 @@ public class TopKInDegree {
 		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(1)
 				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
 
-		// Focus on the nodes' degree higher than average degree
+		// Focus on the nodes' degree higher than certain degree
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
 				.filter(new DegreeFilter());
 
-		// Output 1, ID, degree for group by
+		// Output 1, ID, degree for group by 0
 		DataSet<Tuple3<Long, Long, Long>> topKMapper = highOutDegree
 				.flatMap(new TopKMapper());
 
@@ -157,9 +150,6 @@ public class TopKInDegree {
 
 	public static class TopKMapper implements
 			FlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
-
-		private TreeMap<Long, Long> recordMap = new TreeMap<Long, Long>(
-				Collections.reverseOrder());
 
 		@Override
 		public void flatMap(Tuple2<Long, Long> tuple,

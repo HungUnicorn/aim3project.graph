@@ -1,15 +1,12 @@
 package topKWithName;
 
-import java.util.Iterator;
 import java.util.regex.Pattern;
 
 import org.apache.flink.api.common.functions.FlatMapFunction;
-import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
-import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.FileSystem.WriteMode;
@@ -18,7 +15,6 @@ import org.apache.flink.util.Collector;
 /*TopK: a general class to get TopK nodes with names 
  * Input should be CSV(writeAsCsv) but not txt(writeAsTxt)
  * */
-
 
 public class TopKName{
 
@@ -44,7 +40,7 @@ public class TopKName{
 		DataSet<Tuple2<String, Long>> nodes = inputIndex
 				.flatMap(new NodeReader());
 
-		/* Convert the input to edges, consisting of (source, target) */
+		/* Convert the input as (node, value) */
 		DataSet<Tuple2<Long, Double>> nodesAndValue = inputNodesAndValue.flatMap(new ValueReader());		
 
 		// Output 1, ID, degree for group by
@@ -99,25 +95,6 @@ public class TopKName{
 
 				collector.collect(new Tuple2<String, Long>(node, nodeIndex));
 			}
-		}
-	}
-
-	public static class DegreeOfVertex implements
-			GroupReduceFunction<Tuple1<Long>, Tuple2<Long, Long>> {
-		@Override
-		public void reduce(Iterable<Tuple1<Long>> tuples,
-				Collector<Tuple2<Long, Long>> collector) throws Exception {
-
-			Iterator<Tuple1<Long>> iterator = tuples.iterator();
-			Long vertexId = iterator.next().f0;
-
-			long count = 1L;
-			while (iterator.hasNext()) {
-				iterator.next();
-				count++;
-			}
-
-			collector.collect(new Tuple2<Long, Long>(vertexId, count));
 		}
 	}
 

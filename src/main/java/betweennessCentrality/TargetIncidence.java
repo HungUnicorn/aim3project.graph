@@ -32,13 +32,12 @@ public class TargetIncidence {
 		}
 
 		ExecutionEnvironment env = ExecutionEnvironment
-				.getExecutionEnvironment();
-		// env.setDegreeOfParallelism(dop);
+				.getExecutionEnvironment();		
 
 		DataSource<String> inputArc = env
 				.readTextFile(argPathToArc);
 
-		/* Convert the input to edges, consisting of (source, target) */
+		/* Convert the input to arcs, consisting of (source, target) */
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
 		DataSet<Tuple3<Long, Long, Double>> tarIncMat = arcs.map(
@@ -46,14 +45,12 @@ public class TargetIncidence {
 
 		tarIncMat.writeAsCsv(argPathOut, "\n", "\t",
 				FileSystem.WriteMode.OVERWRITE);
-		JobExecutionResult job = env.execute();
-		/*
-		 * System.out.println("RunTime-->" + ((job.getNetRuntime() / 1000)) +
-		 * "sec");
-		 */
+		
+		env.execute();
+		
 	}
 
-	/**
+	/*
 	 * Reads input edge file <srcId,tarId,weight>. Generates edgeId using
 	 * accumulators and emits <edgeId, tarId, weight>
 	 */

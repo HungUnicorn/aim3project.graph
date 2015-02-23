@@ -20,19 +20,7 @@ public class Config {
 	public static String pathToSmallIndex() {
 		return INPUT_PATH + "smallGraph/example_index";
 	}
-
-	public static String pathToBigArcs() {
-		return "/home/hung/Downloads/sd-arc";
-	}
-
-	public static String pathToBigIndex() {
-		return "/home/hung/Downloads/index-00000";
-	}
-
-	public static String pathToWebCommon() {
-		return "/home/Downloads/";
-	}
-
+	
 	public static String outputPath() {
 		return OUTPUT_PATH + "/tmp/betweennessCentrality/";
 	}

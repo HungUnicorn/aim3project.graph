@@ -24,25 +24,23 @@ import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
 
-/**
+/*
  * An implementation of the connected components algorithm, using a delta
  * iteration.
  * 
- * <p>
  * Initially, the algorithm assigns each vertex an unique ID. In each step, a
  * vertex picks the minimum of its own ID and its neighbors' IDs, as its new ID
  * and tells its neighbors about its new ID. After the algorithm has completed,
  * all vertices in the same component will have the same ID.
  * 
- * <p>
  * A vertex whose component ID did not change needs not propagate its
  * information in the next step. Because of that, the algorithm is easily
  * expressible via a delta iteration. We here model the solution set as the
  * vertices with their current component ids, and the workset as the changed
  * vertices. Because we see all vertices initially as changed, the initial
  * workset and the initial solution set are identical. Also, the delta to the
- * solution set is consequently also the next workset.<br>
- * */
+ * solution set is consequently also the next workset.
+ */
 @SuppressWarnings("serial")
 public class WeakConnectedComponents implements ProgramDescription {
 
@@ -74,11 +72,11 @@ public class WeakConnectedComponents implements ProgramDescription {
 		DataSet<Tuple2<Long, Long>> verticesWithInitialId = vertices
 				.map(new DuplicateValue<Long>());
 
-		// open a delta iteration
+		// Open a delta iteration
 		DeltaIteration<Tuple2<Long, Long>, Tuple2<Long, Long>> iteration = verticesWithInitialId
 				.iterateDelta(verticesWithInitialId, maxIterations, 0);
 
-		// apply the step logic: join with the edges, select the minimum
+		// Apply the step logic: join with the edges, select the minimum
 		// neighbor, update if the component of the candidate is smaller
 		DataSet<Tuple2<Long, Long>> changes = iteration.getWorkset()
 				.join(edges).where(0).equalTo(0)
@@ -103,7 +101,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 		DataSet<Tuple2<Long, Long>> ComponentDistribution = ComponentCount
 				.groupBy(0).aggregate(Aggregations.SUM, 1);
 
-		// emit result
+		// Emit result
 		if (fileOutput) {
 			ComponentDistribution.writeAsCsv(outputPath, "\n", " ",
 					FileSystem.WriteMode.OVERWRITE);
@@ -112,14 +110,9 @@ public class WeakConnectedComponents implements ProgramDescription {
 			numComponent.print();
 			ComponentDistribution.print();
 		}
-
-		// execute program
+		
 		env.execute("Weakly Connected Components");
 	}
-
-	// *************************************************************************
-	// USER FUNCTIONS
-	// *************************************************************************
 
 	public static class CountComponent implements
 			GroupReduceFunction<Tuple1<Long>, Long> {
@@ -196,10 +189,8 @@ public class WeakConnectedComponents implements ProgramDescription {
 		}
 	}
 
-	/**
-	 * Function that turns a value into a 2-tuple where both fields are that
-	 * value.
-	 */
+	/*Function that turns a value into a 2-tuple where both fields are that
+	 * value.*/
 	@ConstantFields("0 -> 0,1")
 	public static final class DuplicateValue<T> implements
 			MapFunction<T, Tuple2<T, T>> {
@@ -210,7 +201,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 		}
 	}
 
-	/**
+	/*
 	 * Undirected edges by emitting for each input edge the input edges itself
 	 * and an inverted version.
 	 */
@@ -228,7 +219,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 		}
 	}
 
-	/**
+	/*
 	 * UDF that joins a (Vertex-ID, Component-ID) pair that represents the
 	 * current component that a vertex is associated with, with a
 	 * (Source-Vertex-ID, Target-VertexID) edge. The function produces a
@@ -265,11 +256,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 	public String getDescription() {
 		return "Parameters: <vertices-path> <edges-path> <result-path> <max-number-of-iterations>";
 	}
-
-	// *************************************************************************
-	// UTIL METHODS
-	// *************************************************************************
-
+	
 	private static boolean fileOutput = false;
 	private static String verticesPath = null;
 	private static String edgesPath = null;

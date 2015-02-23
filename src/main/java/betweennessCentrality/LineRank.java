@@ -68,7 +68,6 @@ public class LineRank {
 		}
 		ExecutionEnvironment env = ExecutionEnvironment
 				.getExecutionEnvironment();
-		// env.setDegreeOfParallelism(dop);
 
 		// Read inArcs and outArcs
 		DataSource<String> inputInArc = env
@@ -83,10 +82,9 @@ public class LineRank {
 		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc
 				.flatMap(new IncidenceArcReader());
 
-		/****************************************************
-		 * Computing normalization factors
-		 ****************************************************/
-		// d1 <- S(G)T*1 which results in d1 of dimensions vxm X mxv => vx1
+		// Computing normalization factors
+
+		// d1 <- S(G)T*1 which results in d1 of dimensions vxm X mx1 => vx1
 		DataSet<Tuple2<Long, Double>> d1 = srcIncMat.groupBy(1)
 				.reduceGroup(new MatrixToVector()).name("D1");
 		// d2 <- T(G)d1; which results in d2 of dimensions mxv X vx1 => mx1
@@ -122,11 +120,12 @@ public class LineRank {
 		DataSet<Tuple2<Long, Double>> edgeScores = d
 				.map(new InitializeRandomVector()).name("V")
 				.withBroadcastSet(numArc, "numArc");
-		//d.print();
-		/********************************************************
+		// d.print();
+
+		/*
 		 * Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
-		 ********************************************************/
+		 */
 
 		DoubleSumAggregator agg = new DoubleSumAggregator();
 
@@ -155,22 +154,24 @@ public class LineRank {
 				// Sum followed by product in matrix vector multiplication would
 				// result vx1
 				// .map(new PrintMapper("v2"))
-				.join(tarIncMat).where(0)
+				.join(tarIncMat)
+				.where(0)
 				.equalTo(1)
 				// c is damping factor
 				.with(new V3_TarIncWithV2())
 				.withBroadcastSet(numArc, "numArc")
 				.name("V3")
-				 //.map(new DampingMapper(dampingFactor, numArc)) // mxv X vx1 => mx1
+				// .map(new DampingMapper(dampingFactor, numArc)) // mxv X vx1
+				// => mx1
 				// .map(new PrintMapper("v3"))
 				.join(iteration).where(0).equalTo(0).with(new L1_NormDiff())
 				.name("L1_NORM");
 		DataSet<Tuple2<Long, Double>> convergedVector = iteration
 				.closeWith(new_edgeScores);
 
-		/********************************************************
+		/*
 		 * Aggregating edge scores for each vertex to get betweenness score
-		 ********************************************************/
+		 */
 		// (S(G) + T(G))^T * V => S(G)^T *V + T(G)^T *V
 
 		DataSet<Tuple2<Long, Double>> partialAggregation_1 = srcIncMat
@@ -188,7 +189,7 @@ public class LineRank {
 		lineRank.writeAsCsv(argPathOut, WriteMode.OVERWRITE).name(
 				"Writing Results");
 
-		JobExecutionResult job = env.execute();
+		env.execute();
 		/*
 		 * System.out
 		 * .println("Total number of iterations in UnweightedLineRank-->" +
@@ -198,15 +199,15 @@ public class LineRank {
 		 */
 	}
 
-	/**
+	/*
 	 * Convergence criterion to check the sum of the differences of edge scores
 	 * is less than a threshold at the end of each iteration
 	 */
 	public static final class L1_NormConvergence implements
 			ConvergenceCriterion<DoubleValue> {
-		
+
 		private static final double EPSILON = 0.001;
-		
+
 		@Override
 		public boolean isConverged(int iteration, DoubleValue value) {
 			double diff = value.getValue();
@@ -215,7 +216,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * Joins the current edge score vector v with previous iteration's vector v
 	 * to find the differences
 	 */
@@ -239,7 +240,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * An intermediate join operation in the iteration between V1 vector and
 	 * S(G) on vector index of V1 and edgeId of S(G)
 	 */
@@ -271,7 +272,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * A join operation to get the product of two vectors (d and v)
 	 */
 	@ConstantFieldsFirst("0->0")
@@ -292,7 +293,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * A map function to randomly initialize edge score vector. An initial value
 	 * to all the edges in the graph
 	 */
@@ -323,7 +324,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * Reused Join function for getting the product in the matrix vector
 	 * multiplication (the sum followed by this product is achieved by using
 	 * group by aggregate)
@@ -390,10 +391,10 @@ public class LineRank {
 		}
 	}
 
-	/*	*//**
-	 * A reduce operation used as a part of normalization
-	 */
 	/*
+	 * A reduce operation used as a part of normalization
+	 * 
+	 * 
 	 * public static final class MatrixToVector extends
 	 * GroupReduceFunction<Tuple3<Long, Long, Double>, Tuple2<Long, Double>> {
 	 * 
@@ -411,7 +412,7 @@ public class LineRank {
 	 * }
 	 */
 
-	/**
+	/*
 	 * A reduce operation used as a part of normalization
 	 */
 	public static final class MatrixToVector implements
@@ -420,7 +421,7 @@ public class LineRank {
 		@Override
 		public void reduce(Iterable<Tuple2<Long, Long>> values,
 				Collector<Tuple2<Long, Double>> out) throws Exception {
-			
+
 			Tuple2<Long, Double> toVector = new Tuple2<Long, Double>();
 			Double sum = 0.0;
 			boolean flag = false;
@@ -445,7 +446,7 @@ public class LineRank {
 
 	}
 
-	/**
+	/*
 	 * A join function for to compute the partial (product part in matrix vector
 	 * multiplication) aggregation
 	 */
@@ -464,7 +465,7 @@ public class LineRank {
 		}
 	}
 
-	/**
+	/*
 	 * A final join to compute full aggregation
 	 */
 	@ConstantFieldsFirst("0")
