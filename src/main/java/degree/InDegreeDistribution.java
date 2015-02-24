@@ -37,14 +37,14 @@ public class InDegreeDistribution {
 		DataSet<Tuple2<Long, Long>> edges = input.flatMap(new EdgeReader());
 
 		/* Create a dataset of all vertex ids and count them */
-		DataSet<Long> numVertices = edges.project(0).types(Long.class)
-				.union(edges.project(1).types(Long.class)).distinct()
+		DataSet<Long> numVertices = edges.<Tuple1<Long>>project(0)
+				.union(edges.<Tuple1<Long>>project(1)).distinct()
 				.reduceGroup(new CountVertices());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges.project(1)
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges.<Tuple1<Long>>project(1)
 		// difference of out-degree and in-degree is project(1), group by target
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
+				.groupBy(0).reduceGroup(new DegreeOfVertex());
 
 		/* Compute the degree distribution */
 		DataSet<Tuple2<Long, Double>> degreeDistribution = verticesWithDegree

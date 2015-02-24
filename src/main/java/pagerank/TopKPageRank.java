@@ -57,7 +57,7 @@ public class TopKPageRank {
 		// Find sinks
 		DataSet<Tuple1<Long>> noOutgoingLinks = pages.flatMap(new FindSinks())
 				.withBroadcastSet(
-						links.project(0).types(Long.class).distinct(), "pages");
+						links.<Tuple1<Long>>project(0).distinct(), "pages");
 
 		// Point sinks to all other nodes
 		DataSet<Tuple2<Long, Long>> sinksToAll = noOutgoingLinks.flatMap(
@@ -78,7 +78,6 @@ public class TopKPageRank {
 
 		DataSet<Tuple2<Long, Double>> pageRank = iterationSet
 				.
-
 				// Iteratively join the iterationSet with the sparseMatrix
 				join(sparseMatrix).where(0)
 				.equalTo(0)
@@ -86,7 +85,6 @@ public class TopKPageRank {
 				.groupBy(0)
 				.sum(1)
 				.
-
 				// To implement the random teleport behaviour we recompute the
 				// pageRank
 				// and applying a function on each PageRank which is given by
@@ -106,8 +104,7 @@ public class TopKPageRank {
 				.flatMap(new TopKMapper());
 
 		DataSet<Tuple2<Long, Double>> results = mapPageRank.groupBy(0)
-				.sortGroup(2, Order.DESCENDING).first(topK).project(1, 2)
-				.types(Long.class, Double.class);
+				.sortGroup(2, Order.DESCENDING).first(topK).<Tuple2<Long, Double>>project(1, 2);
 
 		results.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
 

@@ -52,8 +52,9 @@ public class TopKInDegree {
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(1)
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs
+				.<Tuple1<Long>> project(1).groupBy(0)
+				.reduceGroup(new DegreeOfVertex());
 
 		// Focus on the nodes' degree higher than certain degree
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree

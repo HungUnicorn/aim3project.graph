@@ -16,6 +16,7 @@ import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.util.Collector;
 
 import com.google.common.collect.Iterables;
+
 //Get in-degree distribution (degree, count)
 public class OutDegreeDistribution {
 
@@ -37,14 +38,16 @@ public class OutDegreeDistribution {
 		DataSet<Tuple2<Long, Long>> edges = input.flatMap(new EdgeReader());
 
 		/* Create a dataset of all vertex ids and count them */
-		DataSet<Long> numVertices = edges.project(0).types(Long.class)
-				.union(edges.project(1).types(Long.class)).distinct()
+		DataSet<Long> numVertices = edges.<Tuple1<Long>> project(0)
+				.union(edges.<Tuple1<Long>> project(1)).distinct()
 				.reduceGroup(new CountVertices());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges.project(0)
-		// difference of out-degree and in-degree is project(0), group by source
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = edges
+				.<Tuple1<Long>> project(0)
+				// difference of out-degree and in-degree is project(0), group
+				// by source
+				.groupBy(0).reduceGroup(new DegreeOfVertex());
 
 		/* Compute the degree distribution */
 		DataSet<Tuple2<Long, Double>> degreeDistribution = verticesWithDegree

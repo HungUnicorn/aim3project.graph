@@ -52,10 +52,11 @@ public class TopKOutDegree {
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
 
 		/* Compute the degree of every vertex */
-		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs.project(0)
-				.types(Long.class).groupBy(0).reduceGroup(new DegreeOfVertex());		
-		
-		//Focus on the nodes' degree higher than average degree
+		DataSet<Tuple2<Long, Long>> verticesWithDegree = arcs
+				.<Tuple1<Long>> project(0).groupBy(0)
+				.reduceGroup(new DegreeOfVertex());
+
+		// Focus on the nodes' degree higher than average degree
 		DataSet<Tuple2<Long, Long>> highOutDegree = verticesWithDegree
 				.filter(new DegreeFilter());
 
@@ -150,7 +151,7 @@ public class TopKOutDegree {
 
 	public static class TopKMapper implements
 			FlatMapFunction<Tuple2<Long, Long>, Tuple3<Long, Long, Long>> {
-	
+
 		@Override
 		public void flatMap(Tuple2<Long, Long> tuple,
 				Collector<Tuple3<Long, Long, Long>> collector) throws Exception {

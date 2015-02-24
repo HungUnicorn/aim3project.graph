@@ -79,7 +79,7 @@ public class Closeness {
 
 		DataSet<Tuple2<String, Long>> nodes = inputNode
 				.flatMap(new NodeReader());
-		
+
 		DataSet<Tuple3<Long, CountDistinctElements, Double>> initialSolutionSet = nodes
 				.flatMap(new AssignBitArrayToVertices()).name(
 						"Assign BitArray to Vertex");
@@ -125,8 +125,8 @@ public class Closeness {
 				.closeWith(candidateUpdates, candidateUpdates);
 
 		// Create a dataset of all node ids and count them
-		DataSet<Long> numVertices = edges.project(0).types(Long.class)
-				.union(edges.project(1).types(Long.class)).distinct()
+		DataSet<Long> numVertices = edges.<Tuple1<Long>> project(0)
+				.union(edges.<Tuple1<Long>> project(1)).distinct()
 				.reduceGroup(new CountVertices());
 
 		// Computation of average with a single map which reads the
@@ -135,8 +135,8 @@ public class Closeness {
 				.map(new AverageComputation())
 				.withBroadcastSet(numVertices, "numVertices")
 				.name("Average Computation");
-		
-		// Focus on top K closeness 
+
+		// Focus on top K closeness
 		DataSet<Tuple2<Long, Double>> filterCloseness = closeness
 				.filter(new TopKFilter());
 
@@ -144,9 +144,9 @@ public class Closeness {
 				.flatMap(new TopKMapper());
 
 		DataSet<Tuple2<Long, Double>> topCloseness = mapCloseness.groupBy(0)
-				.sortGroup(2, Order.DESCENDING).first(topK).project(1, 2)
-				.types(Long.class, Double.class);
-		
+				.sortGroup(2, Order.DESCENDING).first(topK)
+				.<Tuple2<Long, Double>> project(1, 2);
+
 		topCloseness.writeAsCsv(argPathOut, WriteMode.OVERWRITE);
 
 		env.execute();

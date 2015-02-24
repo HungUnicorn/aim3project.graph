@@ -90,12 +90,11 @@ public class WeakConnectedComponents implements ProgramDescription {
 				.closeWith(changes, changes);
 		
 		// Size of Component
-		DataSet<Long> numComponent = vertexWithComponentID.project(1)
-				.types(Long.class).distinct().reduceGroup(new CountComponent());
+		DataSet<Long> numComponent = vertexWithComponentID.<Tuple1<Long>>project(1).distinct().reduceGroup(new CountComponent());
 
 		/* Compute the size of every component, emit (Component size, 1) */
 		DataSet<Tuple2<Long, Long>> ComponentCount = vertexWithComponentID
-				.project(1).types(Long.class).groupBy(0)
+				.<Tuple1<Long>>project(1).groupBy(0)
 				.reduceGroup(new ComponentCount()).flatMap(new ComponentMap());
 
 		DataSet<Tuple2<Long, Long>> ComponentDistribution = ComponentCount
@@ -105,7 +104,7 @@ public class WeakConnectedComponents implements ProgramDescription {
 		if (fileOutput) {
 			ComponentDistribution.writeAsCsv(outputPath, "\n", " ",
 					FileSystem.WriteMode.OVERWRITE);
-			numComponent.print();
+			//numComponent.print();
 		} else {
 			numComponent.print();
 			ComponentDistribution.print();
