@@ -140,7 +140,7 @@ public class OutDegreeDistribution {
 
 	public static boolean parseParameters(String[] args) {
 
-		if (args.length < 3 || args.length > 3) {
+		if (args.length < 2 || args.length > 2) {
 			System.err.println("Usage: [path to arc file] [output path]");
 			return false;
 		}
