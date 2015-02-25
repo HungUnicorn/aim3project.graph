@@ -47,9 +47,9 @@ During the course of the project we were able to run the algorithms on a four no
 
 \begin{figure}[H]
 	\begin{center}
+		\caption{Configuration of the 4-node cluster}		
 		\label{fig6a}		
 		\includegraphics[width=1.0\textwidth]{fig6a}	
-		\caption{Configuration of the 4-node cluster}	
 	\end{center}
 \end{figure}
 
@@ -75,57 +75,89 @@ To rapidly test the implementations of the different algorithms an example data 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
 	\begin{center}
+		\caption{Indegree Distribution}		
 		\label{fig7}		
 		\includegraphics[width=1.0\textwidth]{fig7}	
-		\caption{Indegree Distribution}	
 	\end{center}
 \end{minipage}
 \begin{minipage}{.5\textwidth}
 	\begin{center}
+		\caption{Outdegree Distribution}		
 		\label{fig8}		
 		\includegraphics[width=1.0\textwidth]{fig8}	
-		\caption{Outdegree Distribution}	
 	\end{center}
 \end{minipage}
 \end{figure}
 
-
-\section{Results}
-The results of the computations made by this project are very limited due to the lack of computation power. Results from the computation of the indegree and outdegree have been achieved which can be seen in Figure \ref{fig12} and Figure \ref{fig13}. The results of our indegree and outdegree distribution show the distributions are very similar to power-law. Yet, it is observable that whether the indegree distribution nor the outdegree distribution follow a strict linear regression in ln-ln scale, therefore, a regression ANOVA was applied in order to confirm or reject the significance of a power-law. In other words, the distritbution cannot be presented as a staright line
+Further, we used the graph visualization tool Gephi which also provides computation functionalities for the measures degree, PageRank and closeness of graph. We compared our results to the results of Gephi and computed the Pearson correlation between the two result sets. The correlation coefficient of the two different PageRank results is 1 (see Figure \ref{fig9}). The correlation coefficient for the Closeness results is 0.985 (see Figure \ref{fig10}). This shows that our implementation of the algorithms computes correct results.
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
 	\begin{center}
-		\label{fig12}		
-		\includegraphics[width=1.0\textwidth]{fig12}	
-		\caption{Indegree distribution}	
+		\caption{Correlation our results Gephi’s results (PageRank)}		
+		\label{fig9}		
+		\includegraphics[width=1.0\textwidth]{fig9}	
 	\end{center}
 \end{minipage} %
 \begin{minipage}{.5\textwidth}
 	\begin{center}
-		\label{fig13}		
-		\includegraphics[width=1.0\textwidth]{fig13}	
-		\caption{Outdegree distribution}	
+		\caption{Correlation our results Gephi’s results (Closeness)}		
+		\label{fig10}		
+		\includegraphics[width=1.0\textwidth]{fig10}	
 	\end{center}
 \end{minipage}
 \end{figure}
 
-The regression ANOVA (see Figure \ref{fig14}) reveals that the p-value is significant which is 0. However, one of the residual plots on the top right, which is the relationship between fitted value (predicted value) and residual, indicates the line is not a regression line (see Figure \ref{fig15}). The reason there is that the residuals have patterns, which violates the assumption of regression that the residuals must have no patterns. Besides, the data also does not follow the assumption that should be normal distribution based on the noraml probability graph on the top riht. In conclusion, the power-law is not significant. We can therefore confirm the results of other research [4] that power-law is not significant. This violation arises from the noisy tail in indegree and outdegree distritbution.
+\section{Results}
+The results of the computations made by this project are very limited due to the lack of computation power. Results from the computation of the indegree and outdegree have been achieved which can be seen in Figure \ref{fig12} and Figure \ref{fig13}. The results of our indegree and outdegree distribution show the distributions are very similar to power-law. Yet, it is observable that whether the indegree distribution nor the outdegree distribution follow a strict linear regression in ln-ln scale, therefore, a regression ANOVA was applied in order to confirm or reject the significance of a power-law. In other words, the distribution cannot be presented as a straight line.
+
+\begin{figure}[H]
+\begin{minipage}{.5\textwidth}
+	\begin{center}
+		\caption{Indegree distribution}		
+		\label{fig12}		
+		\includegraphics[width=1.0\textwidth]{fig12}	
+	\end{center}
+\end{minipage} %
+\begin{minipage}{.5\textwidth}
+	\begin{center}
+		\caption{Outdegree distribution}		
+		\label{fig13}		
+		\includegraphics[width=1.0\textwidth]{fig13}	
+	\end{center}
+\end{minipage}
+\end{figure}
+
+The regression ANOVA (see Figure \ref{fig14}) reveals that the p-value is significant which is 0. However, one of the residual plots on the top right, which is the relationship between fitted value (predicted value) and residual, indicates the line is not a regression line (see Figure \ref{fig15}). The reason there is that the residuals have patterns, which violates the assumption of regression that the residuals must have no patterns. Besides, the data also does not follow the assumption that should be normal distribution based on the normal probability graph on the top right. In conclusion, the power-law is not significant. We can therefore confirm the results of other research [4] that power-law is not significant. This violation arises from the noisy tail in indegree and outdegree distribution.
 
 \begin{figure}[H]
 	\begin{center}
+		\caption{Regression ANOVA}		
 		\label{fig14}		
 		\includegraphics[width=0.6\textwidth]{fig14}	
-		\caption{Regression ANOVA}	
 	\end{center}
 \end{figure}	
 \begin{figure}[H]	
 	\begin{center}
+		\caption{Residual Plots}		
 		\label{fig15}		
 		\includegraphics[width=0.6\textwidth]{fig15}	
-		\caption{Residual Plots}	
 	\end{center}
 \end{figure}
+
+\begin{table}[H]
+	\caption{Computation overviews}
+	\label{t5}
+	\begin{center}
+		\begin{tabular}{|l|l|l|l|l|}
+			\hline		
+			Source	&Sum of squares	&Degree of freedom	&Mean square &P-value\\ \hline
+			Regression	& 10,823.5	& 1	& 6,348.24	& 0 \\ \hline
+			Error	& 5,232.5	& 3,096	& 1.7	& \\ \hline
+			Total	& 16,056	& 3,070	&	& \\ \hline
+		\end{tabular}
+	\end{center}
+\end{table}
 
 The results of the Top-10 indegree computation can be seen in Table \ref{t4a}. Further, see Table \ref{t4} for the results of the Top-10 outdegree computation. These results are also confirmed by the Web Data Commons project \footnote{Topology of the 2012 WDC Hyperlink Graph. URL: http://webdatacommons.org/hyperlinkgraph/2012-08/topology.html\#toc9 Last accessed: 10th of February 2015}. From these results, top indegree website are more like true popular website comparing to top outdegree. 
 
@@ -175,8 +207,8 @@ To realized the ad revenue of website, daily page views plays as an prominet ind
 
 \begin{figure}[H]	
 	\begin{center}
-		\label{fig1&}		
+		\caption{Outdegree and Page view correlation}		
+		\label{fig16}		
 		\includegraphics[width=0.8\textwidth]{fig16}	
-		\caption{Outdegree and Page view correlation}	
 	\end{center}
 \end{figure}
