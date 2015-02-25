@@ -1,3 +1,5 @@
+This sections describes the API, data sets, cluster configuration and the evaluation we used. 
+
 \subsection{Apache Flink}
 Apache Flink is a large-scale data processing engine optimal to process large amounts of data. It offers APIs for Java, Scala and hadoop MapReduce as well as various APIs to access data. Flink programs can be run locally on a single machine or on a cluster of multiple nodes. When ran on cluster, load distribution and fault tolerance are handled by Apache Flink independently with few configuration effort. Flink enables processing huge amount of data while offering an easy to use API for programmers to implement algorithms.
 
@@ -89,7 +91,7 @@ To rapidly test the implementations of the different algorithms an example data 
 
 
 \section{Results}
-The results of the computations made by this project are very limited due to the lack of computation power. Results from the computation of the indegree and outdegree have been achieved which can be seen in Figure \ref{fig12} and Figure \ref{fig13}. The results of our indegree distribution show the power-law. Yet, it is observable that whether the indegree distribution nor the outdegree distribution follow a strict linear regression, therefore, a regression ANOVA was applied in order to confirm or reject the significance of a power-law.
+The results of the computations made by this project are very limited due to the lack of computation power. Results from the computation of the indegree and outdegree have been achieved which can be seen in Figure \ref{fig12} and Figure \ref{fig13}. The results of our indegree and outdegree distribution show the distributions are very similar to power-law. Yet, it is observable that whether the indegree distribution nor the outdegree distribution follow a strict linear regression in ln-ln scale, therefore, a regression ANOVA was applied in order to confirm or reject the significance of a power-law. In other words, the distritbution cannot be presented as a staright line
 
 \begin{figure}[H]
 \begin{minipage}{.5\textwidth}
@@ -108,7 +110,7 @@ The results of the computations made by this project are very limited due to the
 \end{minipage}
 \end{figure}
 
-The regression ANOVA (see Figure \ref{fig14}) reveals that the p-value is significant which is 0. However, one of the residual plots, which is the relationship between fitted value (predicted value) and residual, indicates the line is not a regression line (see Figure \ref{fig15}). The reason there is that the residuals have patterns, which violates the assumption of regression that the residuals must have no patterns. Besides, the data also does not follow the assumption that should be normal distribution based on the probability graph. In conclusion, the power-law is not significant. We can therefore confirm the results of other research [4].
+The regression ANOVA (see Figure \ref{fig14}) reveals that the p-value is significant which is 0. However, one of the residual plots on the top right, which is the relationship between fitted value (predicted value) and residual, indicates the line is not a regression line (see Figure \ref{fig15}). The reason there is that the residuals have patterns, which violates the assumption of regression that the residuals must have no patterns. Besides, the data also does not follow the assumption that should be normal distribution based on the noraml probability graph on the top riht. In conclusion, the power-law is not significant. We can therefore confirm the results of other research [4] that power-law is not significant. This violation arises from the noisy tail in indegree and outdegree distritbution.
 
 \begin{figure}[H]
 	\begin{center}
@@ -125,7 +127,9 @@ The regression ANOVA (see Figure \ref{fig14}) reveals that the p-value is signif
 	\end{center}
 \end{figure}
 
-The results of the Top-10 indegree computation can be seen in Table \ref{t4a}. Further, see Table \ref{t4} for the results of the Top-10 outdegree computation. These results are also confirmed by the Web Data Commons project \footnote{Topology of the 2012 WDC Hyperlink Graph. URL: http://webdatacommons.org/hyperlinkgraph/2012-08/topology.html\#toc9 Last accessed: 10th of February 2015}.
+The results of the Top-10 indegree computation can be seen in Table \ref{t4a}. Further, see Table \ref{t4} for the results of the Top-10 outdegree computation. These results are also confirmed by the Web Data Commons project \footnote{Topology of the 2012 WDC Hyperlink Graph. URL: http://webdatacommons.org/hyperlinkgraph/2012-08/topology.html\#toc9 Last accessed: 10th of February 2015}. From these results, top indegree website are more like true popular website comparing to top outdegree. 
+
+To realized the ad revenue of website, daily page views plays as an prominet indicantor. Thus, we want to know the relationship between out-degree and page views. The daily page views per user is extracted from Alexa and we compare it with the top-10 outdegree website. The scatter graph shows the outdegree and page views doesn't affect each other.
 
 \begin{table}[H]
 	\caption{Top-10 Indegree (Host Graph)}
