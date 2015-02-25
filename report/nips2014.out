@@ -1,0 +1,15 @@
+\BOOKMARK [1][-]{section.1}{Problem Statement}{}% 1
+\BOOKMARK [1][-]{section.2}{Methodology}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Degree, indegree and outdegree}{section.2}% 3
+\BOOKMARK [2][-]{subsection.2.2}{Degree distribution}{section.2}% 4
+\BOOKMARK [2][-]{subsection.2.3}{PageRank}{section.2}% 5
+\BOOKMARK [2][-]{subsection.2.4}{Closeness centrality}{section.2}% 6
+\BOOKMARK [2][-]{subsection.2.5}{Betweenness centrality}{section.2}% 7
+\BOOKMARK [1][-]{section.3}{Experiments}{}% 8
+\BOOKMARK [2][-]{subsection.3.1}{Apache Flink}{section.3}% 9
+\BOOKMARK [2][-]{subsection.3.2}{Web Data Commons}{section.3}% 10
+\BOOKMARK [2][-]{subsection.3.3}{Data sets}{section.3}% 11
+\BOOKMARK [1][-]{section.4}{Computation}{}% 12
+\BOOKMARK [2][-]{subsection.4.1}{Evaluation}{section.4}% 13
+\BOOKMARK [2][-]{subsection.4.2}{Results}{section.4}% 14
+\BOOKMARK [1][-]{section.5}{Conclusion}{}% 15
