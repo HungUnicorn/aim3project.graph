@@ -4,7 +4,7 @@ The second group of centrality measures is the group of diameter related measure
 
 The third measure is the betweenness which considers the flow. A general definition of the betweenness is the number of node pairs that need to go through a node in order to reach each other taking the minimum number of hops. Figure \ref{fig1} shows the three groups of measures.
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig1}		
 		\includegraphics[width=0.6\textwidth]{fig1}	
@@ -21,7 +21,7 @@ The degree distribution is the probability distribution of the degrees over the 
 \subsection{PageRank}
 The PageRank algorithm was developed by Google founders Larry Page and Sergej Brin at Stanford University in 1996. The algorithm is used to rank pages in order to measure the importance of websites. Therefore, the algorithm computes a probability distribution representing the likelihood that a user reaches a specific web page by randomly clicking on links. In order to compute the PageRank, we run the algorithm in iterations. To handle circles in the graph, which might prevent the algorithm from converging, we implemented the random teleport behaviour. Nodes without outgoing edges have been modified in a way that these point to all other nodes in the network visualized as green arcs in Figure \ref{fig2}.
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig2}		
 		\includegraphics[width=0.75\textwidth]{fig2}	
@@ -34,7 +34,7 @@ Closeness measures the importance of a node based on the distance to other nodes
 
 Following Figure \ref{fig3} shows a toy example showing the intuition. For node 1, at step 1, it connects to two nodes, at step 2, it connects to two nodes and at the final step, it  connects one node. Therefore, node 1’s count is given by 1 * 2 + 2 * 2 + 3 * 1 = 9. For node 3, the count is 3 * 1 + 2 * 2 = 7. It is observable that node 3 is more central than node 1. The closeness supports this since node 3’s count is less than node 1’s count. Note that the closeness does not consider the direction of edges.
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig3}		
 		\includegraphics[width=0.6\textwidth]{fig3}	
@@ -46,7 +46,7 @@ The other scalable skill applied is the count distinct elements skill in data st
 
 Originally, the algorithm is designed for undirected graphs, thus, this project firstly transforms the directed Hyperlink Graph into an undirected graph, and then applies the described algorithm on it.
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig4}		
 		\includegraphics[width=0.6\textwidth]{fig4}	
@@ -57,7 +57,7 @@ Originally, the algorithm is designed for undirected graphs, thus, this project 
 \subsection{Betweenness centrality}
 The betweenness centrality of a node in a network is given by the number of shortest paths from any other node to another node that passes the respective node. It is therefore an indicator of a nodes’ importance or centrality. To calculate it, the intuition is to score each edge by “power iteration” and then calculate the importance of nodes by aggregating the edges’ score. This approach is as well proposed by Kang et al. in the paper “Centralities in Large Networks: Algorithms and Observations”. For the Hyperlink Graph in this project, the implementation pre-processes the graph by removing dead-ends and transform the directed graph into undirected graph.
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig5}		
 		\includegraphics[width=1.0\textwidth]{fig5}	
@@ -69,7 +69,7 @@ The intuition of the betweenness, which is also called LinkRank, is that some ed
 
 Based on the description above, the first step is to transform the graph G into a line graph L(G) where nodes become arcs and edges become nodes, respectively. The scalable idea here is instead of materializing L(G), decomposing L(G) by S(G) x T(G) which are in-edges and out-edges. 
 
-\begin{figure}[h]
+\begin{figure}[H]
 	\begin{center}
 		\label{fig6}		
 		\includegraphics[width=0.8\textwidth]{fig6}	
