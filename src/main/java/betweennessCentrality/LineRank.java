@@ -1,10 +1,8 @@
 package betweennessCentrality;
 
 import java.util.Iterator;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.accumulators.IntCounter;
 import org.apache.flink.api.common.aggregators.ConvergenceCriterion;
 import org.apache.flink.api.common.aggregators.DoubleSumAggregator;
@@ -38,16 +36,19 @@ import com.google.common.collect.Iterables;
 
  The code runs as following 
  1.Building Incidence Matrices. We first construct the incident
- matrices S(G) and T(G) from the sparse adjacency matrix 
- 2.Computing Normalization Factors. 1/The ith element of the
+ matrices S(G) and T(G) from the sparse adjacency matrix.
+ Because Line graph is too big, using two sparse matrices instead materializing Line graph.
+ L(G) = S(G) x T(G)
+
+ 2.Computing Normalization Factors. 1 / the ith element of the
  diagonal matrix D contains the sum of ith column of L(G).
  D is used to column-normalize L(G) so that the resulting
- matrix can be used for the power iteration. 
- 3.Random Walk on the Line Graph. 
+ matrix can be used for the power iteration.
+
+ 3.Random Walk on the Line Graph.
+
  4.Final LINERANK Score. The edge scores are summed up get the final LINERANK score for each node
 
- *Because Line graph is too big, using two sparse matrices instead materializing Line graph.
- *L(G) = S(G) x T(G)
  */
 
 public class LineRank {
@@ -82,7 +83,7 @@ public class LineRank {
 		DataSet<Tuple2<Long, Long>> tarIncMat = inputOutArc
 				.flatMap(new IncidenceArcReader());
 
-		// Computing normalization factors
+		// 2.Computing normalization factors
 
 		// d1 <- S(G)T*1 which results in d1 of dimensions vxm X mx1 => vx1
 		DataSet<Tuple2<Long, Double>> d1 = srcIncMat.groupBy(1)
@@ -91,8 +92,7 @@ public class LineRank {
 		DataSet<Tuple2<Long, Double>> d2 = d1.join(tarIncMat).where(0)
 				.equalTo(1).with(new MatrixVectorMul()).name("D2");
 
-		// d <- 1./d2 an element-wise divide operation, so no dimension change=>
-		// mx1
+		// d <- 1./d2
 		DataSet<Tuple2<Long, Double>> d = d2.map(
 				new MapFunction<Tuple2<Long, Double>, Tuple2<Long, Double>>() {
 					private static final long serialVersionUID = 1L;
@@ -109,7 +109,7 @@ public class LineRank {
 
 				}).name("D");
 
-		// Count arcs
+		// Count arcs (Nodes in Line Graph)
 		DataSource<String> inputArc = env.readTextFile(argPathToArc);
 
 		DataSet<Tuple2<Long, Long>> arcs = inputArc.flatMap(new ArcReader());
@@ -120,10 +120,9 @@ public class LineRank {
 		DataSet<Tuple2<Long, Double>> edgeScores = d
 				.map(new InitializeRandomVector()).name("V")
 				.withBroadcastSet(numArc, "numArc");
-		// d.print();
 
 		/*
-		 * Power Method for computing the stationary probabilities of edges
+		 * 3.Power Method for computing the stationary probabilities of edges
 		 * using Bulk Iteration
 		 */
 
@@ -142,7 +141,10 @@ public class LineRank {
 				.equalTo(0)
 				.with(new V1_HadamardProduct())
 				.name("V1")
-				// Hadamard product of v1 <- d * v
+				// Hadamard product of v1 <- d * v, takes two matrices of the
+				// same dimensions, and produces another matrix where each
+				// element ij is the product of elements ij of the original two
+				// matrices.
 				.join(srcIncMat)
 				.where(0)
 				.equalTo(0)
@@ -170,7 +172,7 @@ public class LineRank {
 				.closeWith(new_edgeScores);
 
 		/*
-		 * Aggregating edge scores for each vertex to get betweenness score
+		 * 4.Aggregating edge scores for each vertex to get betweenness score
 		 */
 		// (S(G) + T(G))^T * V => S(G)^T *V + T(G)^T *V
 
@@ -189,14 +191,7 @@ public class LineRank {
 		lineRank.writeAsCsv(argPathOut, WriteMode.OVERWRITE).name(
 				"Writing Results");
 
-		env.execute();
-		/*
-		 * System.out
-		 * .println("Total number of iterations in UnweightedLineRank-->" +
-		 * ((job.getIntCounterResult(V2_SrcIncWithV1.ACCUM_LOCAL_ITERATIONS) /
-		 * dop) - 1)); System.out.println("RunTime-->" + ((job.getNetRuntime()))
-		 * + "sec");
-		 */
+		env.execute("LineRank");
 	}
 
 	/*
@@ -390,27 +385,6 @@ public class LineRank {
 			return value;
 		}
 	}
-
-	/*
-	 * A reduce operation used as a part of normalization
-	 * 
-	 * 
-	 * public static final class MatrixToVector extends
-	 * GroupReduceFunction<Tuple3<Long, Long, Double>, Tuple2<Long, Double>> {
-	 * 
-	 * @Override public void reduce(Iterator<Tuple3<Long, Long, Double>> values,
-	 * Collector<Tuple2<Long, Double>> out) throws Exception { Tuple2<Long,
-	 * Double> toVector = new Tuple2<Long, Double>(); Double sum = 0.0; boolean
-	 * flag = false; Long key = null; while (values.hasNext()) { Tuple3<Long,
-	 * Long, Double> sameRowValues = values.next(); if (!flag) { key =
-	 * sameRowValues.f1; flag = true; } sum = sum + sameRowValues.f2; }
-	 * 
-	 * toVector.f0 = key; toVector.f1 = sum; //
-	 * System.out.println("d1 -->"+toVector.f0+"  "+toVector.f1);
-	 * out.collect(toVector); }
-	 * 
-	 * }
-	 */
 
 	/*
 	 * A reduce operation used as a part of normalization
