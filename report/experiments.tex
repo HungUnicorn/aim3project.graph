@@ -15,6 +15,8 @@ The Host Graph aggregates the Page Graph by the subdomains and hosts. Therefore,
 
 The PLD reduces the Host Graph by merging the subdomains with their host. The two nodes tu-berlin.de and dima.tu-berlin.de are represented in the PLD as a single node tu-berlin.de.
 
+The exmaple data set is provided and we use it to test closeness, PageRank, betweenness and weakly connected component.
+
 It is obvious that the size of the graphs decreases with the increase of the granularity level. The graphs are separated into two different files, namely an index file and an arc file. The index file consists of tuples which hold an identifier and the node name. The arc file gives tuples of two identifiers representing a link from one node to another. An overview of the different sizes is given by the following table.
 
 \begin{table}[H]
@@ -24,6 +26,7 @@ It is obvious that the size of the graphs decreases with the increase of the gra
 		\begin{tabular}{|l|l|l|}
 			\hline
 			Data Set	&\#Nodes	&\#Arcs \\ \hline
+			Example	        106		141	\\ \hline
 			Page Graph	&1,727M	&64,422M	\\	\hline
 			Subdomain/ Host Graph	&22M	&123M	\\	\hline		
 			PLD Graph	&13M	&56M	\\	\hline				
@@ -38,7 +41,7 @@ As a fallback plan, the decision was made to run the computations locally on reg
 
 Other implemented algorithms such as the PageRank, closeness and betweenness could not be executed since said machines ran out of memory during the computation.
 
-During the course of the project an opportunity arised to run the algorithms on a four node cluster. A detailed view on the configuration of the four node cluster can be seen in Figure \ref{fig6a}. This time the Host Graph as well as the PLD Graph as fallback was used. The computation of the indegree and outdegree was successful on the four node cluster. For both graph levels it was possible to retrieve results. Nevertheless, the other algorithms to measure the connectivity, PageRank and closeness of the graph faced memory issues on the four node cluster.
+During the course of the project we were able to run the algorithms on a four node cluster. A detailed view on the configuration of the four node cluster can be seen in Figure \ref{fig6a}. This time we used the Host Graph as well as the PLD Graph as fallback. The computation of the indegree and outdegree was successful on the four node cluster. For both graph levels we were able to retrieve results. Nevertheless, the other algorithms to measure the connectivity, PageRank and closeness of the graph faced memory issues on the four node cluster. We already tried to modify the configuration of four node cluster to increase the memory, however, the memory is still not enough and this shows the limitation of running those algorithms with this cluster configuration. We tried to increase the taskmanager.heap.mb and reduce the taskmanager.fraction followed Flink documentation.
 
 \begin{figure}[H]
 	\begin{center}
