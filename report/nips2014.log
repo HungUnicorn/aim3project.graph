@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (MiKTeX 2.9) (preloaded format=pdflatex 2014.5.6)  25 FEB 2015 16:37
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (MiKTeX 2.9) (preloaded format=pdflatex 2014.5.6)  25 FEB 2015 17:22
 entering extended mode
 **nips2014.tex
 
@@ -461,13 +461,24 @@ Package pdftex.def Info: fig6a.png used on input line 46.
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [6 <C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Pr
-oject/GitHub/report/fig6a.png>] <fig7.png, id=116, 803.0pt x 602.25pt>
+oject/GitHub/report/fig6a.png>]
+
+Package caption Warning: \label without proper \caption on input line 80.
+See the caption package documentation for explanation.
+
+
+LaTeX Warning: Reference `fig8' on page 7 undefined on input line 68.
+
+
+LaTeX Warning: Reference `fig9' on page 7 undefined on input line 68.
+
+<fig7.png, id=117, 803.0pt x 602.25pt>
 File: fig7.png Graphic file (type png)
  <use fig7.png>
 Package pdftex.def Info: fig7.png used on input line 74.
 (pdftex.def)             Requested size: 198.7425pt x 149.05502pt.
 
-<fig8.png, id=117, 803.0pt x 602.25pt>
+<fig8.png, id=118, 803.0pt x 602.25pt>
 File: fig8.png Graphic file (type png)
  <use fig8.png>
 Package pdftex.def Info: fig8.png used on input line 81.
@@ -478,129 +489,77 @@ Overfull \hbox (1.90002pt too wide) in paragraph at lines 71--85
  []
 
 
-Package caption Warning: \label without proper \caption on input line 93.
+Package caption Warning: \label without proper \caption on input line 94.
 See the caption package documentation for explanation.
 
 
-LaTeX Warning: Reference `fig9' on page 7 undefined on input line 88.
+LaTeX Warning: Reference `fig12' on page 7 undefined on input line 89.
 
 
-Package caption Warning: \label without proper \caption on input line 100.
+Package caption Warning: \label without proper \caption on input line 101.
 See the caption package documentation for explanation.
 
 
-LaTeX Warning: Reference `fig10' on page 7 undefined on input line 88.
+LaTeX Warning: Reference `fig13' on page 7 undefined on input line 89.
 
-<fig9.png, id=120, 481.8pt x 289.08pt>
-File: fig9.png Graphic file (type png)
- <use fig9.png>
-Package pdftex.def Info: fig9.png used on input line 94.
-(pdftex.def)             Requested size: 198.7425pt x 119.24255pt.
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-
-<fig10.png, id=121, 481.8pt x 289.08pt>
-File: fig10.png Graphic file (type png)
- <use fig10.png>
-Package pdftex.def Info: fig10.png used on input line 101.
-(pdftex.def)             Requested size: 198.7425pt x 119.24255pt.
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-Missing character: There is no â in font ptmr7t!
-Missing character: There is no € in font ptmr7t!
-Missing character: There is no ™ in font ptmr7t!
-
-Overfull \hbox (1.90002pt too wide) in paragraph at lines 91--105
-[]$[]$ $[]$ 
- []
-
-
-Package caption Warning: \label without proper \caption on input line 113.
-See the caption package documentation for explanation.
-
-
-LaTeX Warning: Reference `fig12' on page 7 undefined on input line 108.
-
-
-Package caption Warning: \label without proper \caption on input line 120.
-See the caption package documentation for explanation.
-
-
-LaTeX Warning: Reference `fig13' on page 7 undefined on input line 108.
-
-
-Underfull \vbox (badness 1389) has occurred while \output is active []
-
- [7 <C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Pr
-oject/GitHub/report/fig7.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Comp
-uter Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig8.png (PNG copy)> <
-C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Project
-/GitHub/report/fig9.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Computer 
-Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig10.png (PNG copy)>]
-<fig12.png, id=132, 481.8pt x 289.08pt>
+<fig12.png, id=121, 481.8pt x 289.08pt>
 File: fig12.png Graphic file (type png)
  <use fig12.png>
-Package pdftex.def Info: fig12.png used on input line 114.
+Package pdftex.def Info: fig12.png used on input line 95.
 (pdftex.def)             Requested size: 198.7425pt x 119.24255pt.
 
-<fig13.png, id=133, 482.80376pt x 289.08pt>
+<fig13.png, id=122, 482.80376pt x 289.08pt>
 File: fig13.png Graphic file (type png)
  <use fig13.png>
-Package pdftex.def Info: fig13.png used on input line 121.
+Package pdftex.def Info: fig13.png used on input line 102.
 (pdftex.def)             Requested size: 198.7425pt x 118.99553pt.
 
-Overfull \hbox (1.90002pt too wide) in paragraph at lines 111--125
+Overfull \hbox (1.90002pt too wide) in paragraph at lines 92--106
 []$[]$ $[]$ 
  []
 
 
-Package caption Warning: \label without proper \caption on input line 132.
+Package caption Warning: \label without proper \caption on input line 112.
 See the caption package documentation for explanation.
 
 
-LaTeX Warning: Reference `fig14' on page 8 undefined on input line 127.
+LaTeX Warning: Reference `fig14' on page 7 undefined on input line 108.
 
 
-Package caption Warning: \label without proper \caption on input line 139.
+Package caption Warning: \label without proper \caption on input line 119.
 See the caption package documentation for explanation.
 
 
-LaTeX Warning: Reference `fig15' on page 8 undefined on input line 127.
+LaTeX Warning: Reference `fig15' on page 7 undefined on input line 108.
 
-<fig14.png, id=136, 578.16pt x 385.44pt>
+[7 <C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Pro
+ject/GitHub/report/fig7.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Compu
+ter Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig8.png (PNG copy)> <C
+:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Project/
+GitHub/report/fig12.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Computer 
+Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig13.png (PNG copy)>]
+<fig14.png, id=133, 578.16pt x 385.44pt>
 File: fig14.png Graphic file (type png)
  <use fig14.png>
-Package pdftex.def Info: fig14.png used on input line 133.
-(pdftex.def)             Requested size: 198.7425pt x 132.49467pt.
+Package pdftex.def Info: fig14.png used on input line 113.
+(pdftex.def)             Requested size: 238.49341pt x 158.99596pt.
 
-<fig15.png, id=137, 578.16pt x 385.44pt>
+<fig15.png, id=134, 578.16pt x 385.44pt>
 File: fig15.png Graphic file (type png)
  <use fig15.png>
-Package pdftex.def Info: fig15.png used on input line 140.
-(pdftex.def)             Requested size: 198.7425pt x 132.49467pt.
-
-Overfull \hbox (1.90002pt too wide) in paragraph at lines 130--144
-[]$[]$ $[]$ 
- []
-
+Package pdftex.def Info: fig15.png used on input line 120.
+(pdftex.def)             Requested size: 238.49341pt x 158.99596pt.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <9> on input line 146.
+(Font)              <9> on input line 125.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 146.
+(Font)              <6> on input line 125.
 
-Underfull \vbox (badness 5939) has occurred while \output is active []
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [8 <C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Pr
-oject/GitHub/report/fig12.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Com
-puter Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig13.png (PNG copy)>
- <C:/Users/Philip/SkyDrive/Studies/Computer Science @TU-Berlin/9-sem/AIM3/Proje
-ct/GitHub/report/fig14.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Comput
-er Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig15.png (PNG copy)>])
+oject/GitHub/report/fig14.png (PNG copy)> <C:/Users/Philip/SkyDrive/Studies/Com
+puter Science @TU-Berlin/9-sem/AIM3/Project/GitHub/report/fig15.png (PNG copy)>
+])
 ("C:\Users\Philip\SkyDrive\Studies\Computer Science @TU-Berlin\9-sem\AIM3\Proje
 ct\GitHub\report\conclusion.tex") [9]
 Missing character: There is no â in font ptmr7t!
@@ -628,20 +587,20 @@ LaTeX Warning: There were undefined references.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 64.
  ) 
 Here is how much of TeX's memory you used:
- 6875 strings out of 493921
- 104568 string characters out of 3148884
- 196361 words of memory out of 3000000
- 10043 multiletter control sequences out of 15000+200000
+ 6864 strings out of 493921
+ 104439 string characters out of 3148884
+ 197361 words of memory out of 3000000
+ 10034 multiletter control sequences out of 15000+200000
  19858 words of font info for 40 fonts, out of 3000000 for 9000
  841 hyphenation exceptions out of 8191
- 42i,11n,40p,866b,365s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 42i,11n,40p,1031b,365s stack positions out of 5000i,500n,10000p,200000b,50000s
 {C:/Program Files/MiKTex/fonts/enc/dvips/fontname/8r.enc}<C:/Program Files/Mi
 KTex/fonts/type1/urw/courier/ucrr8a.pfb><C:/Program Files/MiKTex/fonts/type1/ur
 w/helvetic/uhvb8a.pfb><C:/Program Files/MiKTex/fonts/type1/urw/times/utmb8a.pfb
 ><C:/Program Files/MiKTex/fonts/type1/urw/times/utmr8a.pfb>
-Output written on nips2014.pdf (10 pages, 414124 bytes).
+Output written on nips2014.pdf (10 pages, 402313 bytes).
 PDF statistics:
- 187 PDF objects out of 1000 (max. 8388607)
+ 184 PDF objects out of 1000 (max. 8388607)
  44 named destinations out of 1000 (max. 500000)
- 196 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 186 words of extra memory for PDF output out of 10000 (max. 10000000)
 

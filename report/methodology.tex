@@ -13,13 +13,13 @@ The third measure is the betweenness which considers the flow. A general definit
 \end{figure}
 
 \subsection{Degree, indegree and outdegree}
-The degree is a fundamental measure within the analysis of networks. It gives some indication of a nodes position in the network. The indegree of a vertex in a directed graph is given by the number of edges pointing to the respective vertex. The outdegree on the contrary gives the number of edges coming from the corresponding node. In order to efficiently compute the both degrees, we build the adjacency matrix of the network and count the neighbors of node with MapReduce. Besides, we also write a top K degree computation to focus on higher degree node.
+The degree is a fundamental measure within the analysis of networks. It gives some indication of a nodes position in the network. The indegree of a vertex in a directed graph is given by the number of edges pointing to the respective vertex. The outdegree on the contrary gives the number of edges coming from the corresponding node. In order to efficiently compute the both degrees, we build the adjacency matrix of the network and count the neighbors of node with MapReduce.
 
 \subsection{Degree distribution}
-The degree distribution is the probability distribution of the degrees over the whole network. This projects scalable computes them by using the MapReduce model using the degree as key in a key-value pair. The subsequent reduce job builds the sum of these key-value pairs and so builds the degree distribution.
+The degree distribution is the probability distribution of the degrees over the whole network. This project scalable computes them by using the MapReduce model using the degree as key in a key-value pair. The subsequent reduce job builds the sum of these key-value pairs and so builds the degree distribution.
 
 \subsection{PageRank}
-The PageRank algorithm was developed by Google founders Larry Page and Sergej Brin at Stanford University in 1996. The algorithm is used to rank pages in order to measure the importance of websites. Therefore, the algorithm computes a probability distribution representing the likelihood that a user reaches a specific web page by randomly clicking on links. In order to compute the PageRank, we run the algorithm in iterations. To handle circles in the graph, which might prevent the algorithm from converging, we implemented the random teleport behaviour. Nodes without outgoing edges have been modified in a way that these point to all other nodes in the network visualized as green arcs in Figure \ref{fig2}. We also want to focus on higher PageRank and write a top K PageRank.
+The PageRank algorithm was developed by Google founders Larry Page and Sergej Brin at Stanford University in 1996. The algorithm is used to rank pages in order to measure the importance of websites. Therefore, the algorithm computes a probability distribution representing the likelihood that a user reaches a specific web page by randomly clicking on links. In order to compute the PageRank, we run the algorithm in iterations. To handle circles in the graph, which might prevent the algorithm from converging, we implemented the random teleport behavior. At each node there is a certain probability that the random surfer "teleports" to another node randomly. Further, nodes without outgoing edges constitute a serious problem that has to be handled. There are several possibilities to tackle this issue. In this project nodes without outgoing edges have been modified in a way that these point to all other nodes in the network visualized as green arcs in Figure \ref{fig2}.
 
 \begin{figure}[H]
 	\begin{center}
@@ -30,7 +30,7 @@ The PageRank algorithm was developed by Google founders Larry Page and Sergej Br
 \end{figure}
 
 \subsection{Closeness centrality}
-Closeness measures the importance of a node based on the distance to other nodes in the network. The intuition of the large-scale algorithm is to count approximately the number of neighbors that a node connects to at each step of the iterative computation. This approach is proposed by Kang et al. in their paper “Centralities in Large Networks: Algorithms and Observations”. Effective Closeness is a large-scale centrality algorithm. 
+Closeness measures the importance of a node based on the distance to other nodes in the network. The intuition of the large-scale algorithm is to count approximately the number of neighbors that a node connects to at each step of the iterative computation. This approach is proposed by Kang et al. in their paper “Centralities in Large Networks: Algorithms and Observations” [1]. Effective Closeness is a large-scale centrality algorithm. 
 
 Following Figure \ref{fig3} shows a toy example showing the intuition. For node 1, at step 1, it connects to two nodes, at step 2, it connects to two nodes and at the final step, it  connects one node. Therefore, node 1’s count is given by 1 * 2 + 2 * 2 + 3 * 1 = 9. For node 3, the count is 3 * 1 + 2 * 2 = 7. It is observable that node 3 is more central than node 1. The closeness supports this since node 3’s count is less than node 1’s count. Note that the closeness does not consider the direction of edges.
 
@@ -42,9 +42,9 @@ Following Figure \ref{fig3} shows a toy example showing the intuition. For node 
 	\end{center}
 \end{figure}
 
-The other scalable skill applied is the count distinct elements skill in data stream which is called Flajolet-Martin (FM).  When observing a stream of random integers, see an integer which binary representation starts with limited buckets, there is a higher chance that the cardinality of the stream is 2\^(size of the limited buckets). For instance, 25\% of bits start with "01", 12,5\% starts with "001" and if the limited bucket show "001", the estimated cardinality is 8. Thus, effective closeness algorithm uses bitstring to represent nodes and update the next step with bitwise OR. 
+The other scalable skill applied is the count distinct elements skill in data stream which is called Flajolet-Martin (FM).  When observing a stream of random integers, see an integer which binary representation starts with limited buckets, there is a higher chance that the cardinality of the stream is 2\^\ (size of the limited buckets). For instance, 25\% of bits start with "01", 12,5\% starts with "001" and if the limited bucket show "001", the estimated cardinality is 8. Thus, effective closeness algorithm uses bitstring to represent nodes and update the next step with bitwise OR. 
 
-Originally, the algorithm is designed for undirected graphs, thus, this project firstly transforms the directed Hyperlink Graph into an undirected graph, and then applies the described algorithm on it. We want to focus on higher closeness nodes rather than all nodes, thus, our program runs as a top K closeness
+Originally, the algorithm is designed for undirected graphs, thus, this project firstly transforms the directed Hyperlink Graph into an undirected graph, and then applies the described algorithm on it.
 
 \begin{figure}[H]
 	\begin{center}
